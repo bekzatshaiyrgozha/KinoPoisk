@@ -1,0 +1,63 @@
+{% extends 'base.html' %} {% load static %} {% load socialaccount %} {% provider_login_url "google" as google_login_url %} {% block title %}Войти — Kinopoisk Clone{% endblock %} {% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <a href="javascript:history.back()" style="color:var(--muted); text-decoration:none;">←</a>
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                Яндекс
+                <span style="background:#111;padding:4px 8px;border-radius:10px;font-weight:600;font-size:12px;">ID</span>
+            </div>
+            <div style="width: 24px;"></div>
+        </div>
+
+        <h4 style="font-weight:700; text-align:center; margin-bottom: 20px;">Войдите или зарегистрируйтесь</h4>
+
+        <div class="tabs">
+            <div class="tab-btn active">Почта</div>
+        </div>
+
+        <form method="post" action="{% url 'login' %}" novalidate>
+            {% csrf_token %} {% if form.non_field_errors %}
+            <div style="color: #ff4444; font-size: 13px; margin-bottom: 12px; background: rgba(255, 68, 68, 0.1); padding: 8px 12px; border-radius: 8px;">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="input-icon">
+                <input type="text" name="username" placeholder="Логин или email" required>
+                <div class="icon">📧</div>
+            </div>
+
+            <div class="input-icon">
+                <input type="password" name="password" placeholder="Пароль" required>
+                <div class="icon">🔒</div>
+            </div>
+
+            <button type="submit" class="btn-primary-custom" style="margin-bottom: 16px;">Войти</button>
+        </form>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <div class="small-muted" style="margin-bottom: 12px;">Или войдите с помощью</div>
+            <div class="social-row">
+                {% if google_login_url %}
+                <a href="{{ google_login_url }}" class="social-circle" title="Войти через Google" aria-label="Google">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M5.27 9.76A7.08 7.08 0 0 1 12 4.91c1.77 0 3.31.61 4.55 1.64l3.42-3.42A11.8 11.8 0 0 0 12 0C7.7 0 3.9 2.47 1.73 6.23l3.54 3.53z"/>
+                        <path fill="#34A853" d="M16.04 18.01c-1.09.68-2.48 1.09-4.04 1.09a7.08 7.08 0 0 1-6.72-4.82l-3.54 3.54A11.8 11.8 0 0 0 12 24c2.96 0 5.7-1 7.84-2.67l-3.8-3.32z"/>
+                        <path fill="#4A90E2" d="M19.84 22.67A11.8 11.8 0 0 0 24 12c0-.78-.08-1.54-.22-2.27H12v4.54h6.69a6.81 6.81 0 0 1-2.89 3.74l3.04 3.66z"/>
+                        <path fill="#FBBC05" d="M5.27 9.76A7.08 7.08 0 0 1 11.99 4.9c1.94 0 3.67.74 5.02 1.94l3.75-3.75A11.8 11.8 0 0 0 5.27 9.76z"/>
+                    </svg>
+                </a>
+                {% else %}
+                <div class="social-circle" title="Google не подключен" style="opacity:0.4;cursor:not-allowed;">G</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <div class="small-muted" style="margin-bottom: 8px;">Нет аккаунта?</div>
+            <a class="text-link" href="{% url 'register' %}">Создать аккаунт</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

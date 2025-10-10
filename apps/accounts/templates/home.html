@@ -1,0 +1,44 @@
+{% extends 'base.html' %} {% block title %}Kinopoisk{% endblock %} {% block content %}
+<div class="hero">
+    <div class="hero-left">
+        <h1 class="hero-title">Лучшие фильмы и сериалы — прямо сейчас</h1>
+        <p class="hero-sub">Ответ на вопрос «Что посмотреть?» на ближайшие 30 вечеров. В вашем распоряжении — тысячи фильмов и сериалов: от новых и нашумевших до легендарных. Без рекламы и в высоком качестве</p>
+        <div class="hero-cta">
+        </div>
+
+        <div class="section" style="margin-top:18px">
+            <div class="section-title">
+                <h3 style="margin:0">Премьеры</h3>
+            </div>
+            <div class="cards">
+
+                <div class="card">
+                    <img src="https://picsum.photos/seed/kz{{ i }}/300/420" alt="poster">
+                    <div class="meta">
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<div class="section">
+    <div class="section-title">
+        <h3 style="margin:0">Популярное</h3>
+    </div>
+    <div class="cards">
+
+        <div class="card">
+            <img src="https://picsum.photos/seed/pop{{ i }}/300/420" alt="poster">
+
+            <div class="meta">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
