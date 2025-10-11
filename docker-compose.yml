@@ -1,0 +1,21 @@
+services:
+  backend: # Django backend service
+    build: .
+    volumes:
+      - .:/app
+    ports: 
+      - "8000:8000"
+    env_file:
+      - .env 
+  migration: # Django migration service
+    build: .
+    command: python3 manage.py migrate
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    
+
+    
