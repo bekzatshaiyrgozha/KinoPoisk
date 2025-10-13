@@ -28,6 +28,7 @@ DJANGO_AND_THIRD_PARTY_APPS = [
 
 PROJECT_APPS = [
    'apps.accounts',
+   'apps.movies',
 ]
 
 INSTALLED_APPS = DJANGO_AND_THIRD_PARTY_APPS + PROJECT_APPS

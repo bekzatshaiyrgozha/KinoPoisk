@@ -2,5 +2,4 @@
 Django==5.2
 gunicorn
 
-# Конфигурация через переменные окружения
 python-decouple==3.8
