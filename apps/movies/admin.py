@@ -1,28 +1,58 @@
 from django.contrib import admin
 from .models import Film, Comment
 
-
-
-class CommentInline(admin.TabularInline):
-    model = Comment
-    extra = 0
-    readonly_fields = ('user', 'created_at')
-    fields = ('user', 'text', 'created_at')
-
-
-
-@admin.register(Film)
+admin.site.register(Film)
 class FilmAdmin(admin.ModelAdmin):
-    list_display = ('title', 'description')
-    search_fields = ('title', 'description')
-    list_filter = ('id',)
-    ordering = ('title',)
+    list_display = (
+        'title', 
+        'description'
+    )
+    list_filter = (
+        'title',
+        'description'
+    )
+    search_fields = (
+        'title', 
+        'description'
+    )
+    list_per_page = 25
+    list_editable = (
+        'title', 
+        'description'
+    )
+    list_display_links = (
+        'title',
+        'description'
+    )
+    list_max_show_all = 100
 
-@admin.register(Comment)
+admin.site.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ('film', 'user', 'created_at')
-    search_fields = ('film__title', 'user__username', 'text')
-    list_filter = ('created_at', 'film')
-    ordering = ('-created_at',)
-
-    readonly_fields = ('user', 'film', 'created_at')
+    list_display = (
+        'film',
+        'user', 
+        'text', 
+        'created_at'
+    )
+    list_filter = (
+        'film', 
+        'user', 
+        'created_at'
+    )
+    search_fields = (
+        'film',
+        'user',
+        'text'
+    )
+    list_per_page = 25
+    list_editable = (
+        'film', 
+        'user', 
+        'text'
+    )
+    list_display_links = (
+        'film', 
+        'user', 
+        'text'
+    )
+    list_max_show_all = 100
