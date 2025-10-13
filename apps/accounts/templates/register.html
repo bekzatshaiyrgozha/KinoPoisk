@@ -1,63 +1,32 @@
-{% extends 'base.html' %} {% load socialaccount %} {% provider_login_url "google" as google_login_url %} {% block title %}Регистрация — Kinopoisk Clone{% endblock %} {% block content %}
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <a href="javascript:history.back()" style="color:var(--muted); text-decoration:none;">←</a>
-            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
-                Яндекс
-                <span style="background:#111;padding:4px 8px;border-radius:10px;font-weight:600;font-size:12px;">ID</span>
-            </div>
-            <div style="width: 24px;"></div>
+{% extends 'base.html' %}
+
+{% block title %}Регистрация - KinoPoisk{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Регистрация</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+            {{ field }}
+            {% if field.help_text %}
+                <small style="color: #666;">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+                <div style="color: red;">{{ error }}</div>
+            {% endfor %}
         </div>
+        {% endfor %}
 
-        <h4 style="font-weight:700; text-align:center; margin-bottom: 20px;">Создать аккаунт</h4>
+        <button type="submit" class="btn">Зарегистрироваться</button>
+    </form>
 
-        <form method="post" action="{% url 'register' %}">
-            {% csrf_token %}
-
-            <div class="input-icon">
-                <input type="email" name="email" placeholder="Email" required>
-                <div class="icon">📧</div>
-            </div>
-
-            <div class="input-icon">
-                <input type="text" name="username" placeholder="Имя пользователя" required>
-                <div class="icon">👤</div>
-            </div>
-
-            <div class="input-icon">
-                <input type="password" name="password1" placeholder="Пароль" required>
-                <div class="icon">🔒</div>
-            </div>
-
-            <div class="input-icon">
-                <input type="password" name="password2" placeholder="Повторите пароль" required>
-                <div class="icon">🔒</div>
-            </div>
-
-            <button type="submit" class="btn-primary-custom" style="margin-bottom: 20px;">Зарегистрироваться</button>
-        </form>
-
-        <div style="height: 1px; background: var(--border); margin: 20px 0;"></div>
-
-        <div style="text-align: center;">
-            <div class="small-muted" style="margin-bottom: 12px;">Или войдите через Google</div>
-            <div class="social-row">
-                <a href="{{ google_login_url }}" class="social-circle" title="Войти через Google">
-                    <svg width="20" height="20" viewBox="0 0 24 24">
-                        <path fill="#EA4335" d="M5.27 9.76A7.08 7.08 0 0 1 12 4.91c1.77 0 3.31.61 4.55 1.64l3.42-3.42A11.8 11.8 0 0 0 12 0C7.7 0 3.9 2.47 1.73 6.23l3.54 3.53z"/>
-                        <path fill="#34A853" d="M16.04 18.01c-1.09.68-2.48 1.09-4.04 1.09a7.08 7.08 0 0 1-6.72-4.82l-3.54 3.54A11.8 11.8 0 0 0 12 24c2.96 0 5.7-1 7.84-2.67l-3.8-3.32z"/>
-                        <path fill="#4A90E2" d="M19.84 22.67A11.8 11.8 0 0 0 24 12c0-.78-.08-1.54-.22-2.27H12v4.54h6.69a6.81 6.81 0 0 1-2.89 3.74l3.04 3.66z"/>
-                        <path fill="#FBBC05" d="M5.27 9.76A7.08 7.08 0 0 1 11.99 4.9c1.94 0 3.67.74 5.02 1.94l3.75-3.75A11.8 11.8 0 0 0 5.27 9.76z"/>
-                    </svg>
-                </a>
-            </div>
-        </div>
-
-        <div style="text-align: center; margin-top: 20px;">
-            <span class="small-muted">Уже есть аккаунт?</span>
-            <a class="text-link" href="{% url 'login' %}"> Войти</a>
-        </div>
-    </div>
+    <p style="margin-top: 20px;">
+        Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a>
+    </p>
 </div>
 {% endblock %}

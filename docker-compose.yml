@@ -9,7 +9,7 @@ services:
       - .env 
   migration: # Django migration service
     build: .
-    command: python3 manage.py migrate
+    command: python3 manage.py makemigrations && python3 manage.py migrate
     volumes:
       - .:/app
     env_file:

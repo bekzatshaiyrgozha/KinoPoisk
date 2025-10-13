@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Профиль - KinoPoisk{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Профиль пользователя</h2>
+
+    {% if user.is_authenticated %}
+    <div class="form-group">
+        <label>Имя пользователя:</label>
+        <p>{{ user.username }}</p>
+    </div>
+
+    <div class="form-group">
+        <label>Email:</label>
+        <p>{{ user.email }}</p>
+    </div>
+
+    <div class="form-group">
+        <label>Имя:</label>
+        <p>{{ user.first_name }}</p>
+    </div>
+
+    <div class="form-group">
+        <label>Фамилия:</label>
+        <p>{{ user.last_name }}</p>
+    </div>
+
+    <div class="form-group">
+        <label>Дата регистрации:</label>
+        <p>{{ user.date_joined|date:"d.m.Y H:i" }}</p>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <a href="{% url 'home' %}" class="btn">На главную</a>
+        <a href="{% url 'logout' %}" class="btn" style="background-color: #dc3545; margin-left: 10px;">Выйти</a>
+    </div>
+    {% else %}
+    <p>Вы не авторизованы. <a href="{% url 'login' %}">Войти</a></p>
+    {% endif %}
+</div>
+{% endblock %}
