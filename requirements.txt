@@ -1,9 +1,6 @@
-# Django Core
 Django==5.2
 gunicorn
-
+django-extensions
 python-decouple==3.8
-
-# ER Diagram generation
 pydotplus
 pyparsing

@@ -4,29 +4,32 @@
 
 {% block content %}
 <div class="form-container">
-    <h2>Регистрация</h2>
+    <h2>Создать аккаунт</h2>
+    <p style="text-align: center; color: rgba(255, 255, 255, 0.7); margin-bottom: 32px; font-size: 0.95rem;">
+        Присоединяйтесь к KinoPoisk и начните свой кино-путь
+    </p>
 
     <form method="post">
         {% csrf_token %}
 
         {% for field in form %}
         <div class="form-group">
-            <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
             {{ field }}
             {% if field.help_text %}
-                <small style="color: #666;">{{ field.help_text }}</small>
+                <small style="color: rgba(255, 255, 255, 0.5); font-size: 0.8rem; margin-top: 4px; display: block;">{{ field.help_text }}</small>
             {% endif %}
             {% for error in field.errors %}
-                <div style="color: red;">{{ error }}</div>
+                <div style="color: #f56565; font-size: 0.85rem; margin-top: 4px;">{{ error }}</div>
             {% endfor %}
         </div>
         {% endfor %}
 
-        <button type="submit" class="btn">Зарегистрироваться</button>
+        <button type="submit" class="btn">Создать аккаунт</button>
     </form>
 
-    <p style="margin-top: 20px;">
+    <div class="form-link">
         Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a>
-    </p>
+    </div>
 </div>
 {% endblock %}
