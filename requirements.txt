@@ -3,3 +3,7 @@ Django==5.2
 gunicorn
 
 python-decouple==3.8
+
+# ER Diagram generation
+pydotplus
+pyparsing
