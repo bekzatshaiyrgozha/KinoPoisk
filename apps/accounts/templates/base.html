@@ -1,43 +1,44 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}КиноПоиск{% endblock %}</title>
+    <title>{% block title %}Kinopoisk{% endblock %}</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
             font-family: Arial, sans-serif;
             background-color: #fff;
             color: #000;
             line-height: 1.4;
         }
-
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 15px;
         }
-
         /* Header */
+        
         .header {
             background: #1f1f1f;
             color: white;
             padding: 15px 0;
             border-bottom: 1px solid #e5e5e5;
         }
-
+        
         .header-content {
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
-
+        
         .logo {
             display: flex;
             align-items: center;
@@ -47,42 +48,42 @@
             font-size: 24px;
             font-weight: bold;
         }
-
         /* Navigation */
+        
         .nav {
             background: #f8f8f8;
             border-bottom: 1px solid #e5e5e5;
         }
-
+        
         .nav-content {
             display: flex;
             align-items: center;
             height: 50px;
         }
-
+        
         .nav-links {
             display: flex;
             gap: 25px;
             align-items: center;
         }
-
+        
         .nav a {
             color: #000;
             text-decoration: none;
             font-size: 14px;
             padding: 5px 0;
         }
-
+        
         .nav a:hover {
             color: #ff6b35;
         }
-
+        
         .nav a.active {
             color: #ff6b35;
             font-weight: bold;
         }
-
         /* Forms */
+        
         .form-container {
             background: #fff;
             padding: 30px;
@@ -91,25 +92,25 @@
             margin: 40px auto;
             max-width: 400px;
         }
-
+        
         .form-container h2 {
             color: #000;
             font-size: 20px;
             margin-bottom: 20px;
             text-align: center;
         }
-
+        
         .form-group {
             margin-bottom: 15px;
         }
-
+        
         .form-group label {
             display: block;
             margin-bottom: 5px;
             font-size: 14px;
             color: #000;
         }
-
+        
         .form-input {
             width: 100%;
             padding: 10px;
@@ -119,12 +120,12 @@
             background: #fff;
             color: #000;
         }
-
+        
         .form-input:focus {
             outline: none;
             border-color: #ff6b35;
         }
-
+        
         .btn {
             background: #ff6b35;
             color: white;
@@ -136,57 +137,55 @@
             width: 100%;
             margin-top: 10px;
         }
-
+        
         .btn:hover {
             background: #e55a2b;
         }
-
         /* Messages */
+        
         .messages {
             margin: 20px auto;
             padding: 10px;
             border-radius: 4px;
             max-width: 400px;
         }
-
+        
         .messages .success {
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
-
+        
         .messages .error {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
-
+        
         .form-link {
             text-align: center;
             margin-top: 15px;
             font-size: 14px;
         }
-
+        
         .form-link a {
             color: #ff6b35;
             text-decoration: none;
         }
-
+        
         .form-link a:hover {
             text-decoration: underline;
         }
-
         /* Responsive */
+        
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
                 gap: 10px;
             }
-
             .nav-links {
                 gap: 15px;
             }
-
             .form-container {
                 margin: 20px;
                 padding: 20px;
@@ -194,22 +193,21 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Header -->
     <div class="header">
         <div class="container">
             <div class="header-content">
                 <a href="{% url 'home' %}" class="logo">
-                    <span>КиноПоиск</span>
+                    <span>Kinopoisk</span>
                 </a>
                 <div class="nav-links">
                     {% if user.is_authenticated %}
-                        <a href="{% url 'profile' %}">Профиль</a>
-                        <a href="{% url 'logout' %}">Выйти</a>
-                    {% else %}
-                        <a href="{% url 'login' %}">Войти</a>
-                        <a href="{% url 'register' %}">Регистрация</a>
-                    {% endif %}
+                    <a href="{% url 'profile' %}">Profile</a>
+                    <a href="{% url 'logout' %}">Logout</a> {% else %}
+                    <a href="{% url 'login' %}">Login</a>
+                    <a href="{% url 'register' %}">Register</a> {% endif %}
                 </div>
             </div>
         </div>
@@ -220,14 +218,11 @@
         <div class="container">
             <div class="nav-content">
                 <div class="nav-links">
-                    <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Главная</a>
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'profile' %}" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}">Профиль</a>
-                        <a href="{% url 'logout' %}">Выйти</a>
-                    {% else %}
-                        <a href="{% url 'login' %}" class="{% if request.resolver_match.url_name == 'login' %}active{% endif %}">Войти</a>
-                        <a href="{% url 'register' %}" class="{% if request.resolver_match.url_name == 'register' %}active{% endif %}">Регистрация</a>
-                    {% endif %}
+                    <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Main</a> {% if user.is_authenticated %}
+                    <a href="{% url 'profile' %}" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}">Profile</a>
+                    <a href="{% url 'logout' %}">Выйти</a> {% else %}
+                    <a href="{% url 'login' %}" class="{% if request.resolver_match.url_name == 'login' %}active{% endif %}">Login</a>
+                    <a href="{% url 'register' %}" class="{% if request.resolver_match.url_name == 'register' %}active{% endif %}">Register</a> {% endif %}
                 </div>
             </div>
         </div>
@@ -235,16 +230,15 @@
 
     <div class="container">
         {% if messages %}
-            <div class="messages">
-                {% for message in messages %}
-                    <div class="{{ message.tags }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="{{ message.tags }}">
+                {{ message }}
             </div>
-        {% endif %}
-
-        {% block content %}{% endblock %}
+            {% endfor %}
+        </div>
+        {% endif %} {% block content %}{% endblock %}
     </div>
 </body>
+
 </html>

@@ -1,37 +1,32 @@
-{% extends 'base.html' %}
-
-{% block title %}Главная - КиноПоиск{% endblock %}
-
-{% block content %}
+{% extends 'base.html' %} {% block title %}Main-Kinopoisk{% endblock %} {% block content %}
 <div class="home-container">
     <!-- Hero Section -->
     <div class="hero-section">
         <div class="hero-content">
             <h1 class="hero-title">
-                <span class="hero-icon">🎬</span>
-                КиноПоиск
+                <span class="hero-icon">🎬</span> Kinopoisk
             </h1>
             <p class="hero-subtitle">
-                Ваш персональный гид в мире кино. Откройте для себя тысячи фильмов, сериалов и актеров.
+                Your personal guide to the world of cinema. Discover thousands of films, TV series, and actors.
             </p>
 
             {% if user.is_authenticated %}
-                <div class="welcome-card">
-                    <div class="welcome-header">
-                        <span class="welcome-icon">👋</span>
-                        <span class="welcome-text">С возвращением, {{ user.username }}!</span>
-                    </div>
-                    <p class="welcome-message">Готовы продолжить ваше кино-путешествие?</p>
-                    <a href="{% url 'profile' %}" class="profile-btn">🏠 Мой профиль</a>
+            <div class="welcome-card">
+                <div class="welcome-header">
+                    <span class="welcome-icon">👋</span>
+                    <span class="welcome-text">Welcome back, {{ user.username }}!</span>
                 </div>
+                <p class="welcome-message">Ready to continue your cinematic journey?</p>
+                <a href="{% url 'profile' %}" class="profile-btn">🏠 My Profile</a>
+            </div>
             {% else %}
-                <div class="auth-card">
-                    <p class="auth-message">Присоединяйтесь к сообществу киноманов</p>
-                    <div class="auth-buttons">
-                        <a href="{% url 'login' %}" class="login-btn">🚪 Войти</a>
-                        <a href="{% url 'register' %}" class="register-btn">✨ Регистрация</a>
-                    </div>
+            <div class="auth-card">
+                <p class="auth-message">Join the film buff community</p>
+                <div class="auth-buttons">
+                    <a href="{% url 'login' %}" class="login-btn">🚪 Login</a>
+                    <a href="{% url 'register' %}" class="register-btn">✨ Register</a>
                 </div>
+            </div>
             {% endif %}
         </div>
     </div>
@@ -41,59 +36,59 @@
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🎭</div>
-                <h3 class="feature-title">Фильмы</h3>
-                <p class="feature-description">Тысячи фильмов разных жанров и годов выпуска</p>
+                <h3 class="feature-title">Movies</h3>
+                <p class="feature-description">Thousands of films of different genres and years of release</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">⭐</div>
-                <h3 class="feature-title">Рейтинги</h3>
-                <p class="feature-description">Оценивайте и обсуждайте фильмы с сообществом</p>
+                <h3 class="feature-title">Reiting</h3>
+                <p class="feature-description">Rate and discuss movies with the community</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">👥</div>
-                <h3 class="feature-title">Сообщество</h3>
-                <p class="feature-description">Общайтесь с другими киноманами и делитесь мнениями</p>
+                <h3 class="feature-title">Community</h3>
+                <p class="feature-description">Connect with other film buffs and share your opinions</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🔍</div>
-                <h3 class="feature-title">Поиск</h3>
-                <p class="feature-description">Найдите любой фильм или сериал за несколько секунд</p>
+                <h3 class="feature-title">Find</h3>
+                <p class="feature-description">Find any movie or TV series in a few seconds</p>
             </div>
         </div>
     </div>
 
     <!-- Popular Movies Preview -->
     <div class="movies-preview">
-        <h2 class="section-title">Популярные фильмы</h2>
+        <h2 class="section-title">Popular films</h2>
         <div class="movies-grid">
             <div class="movie-card">
                 <div class="movie-poster">🎞️</div>
                 <div class="movie-info">
-                    <h4>Фильм 1</h4>
+                    <h4>Film 1</h4>
                     <div class="movie-rating">⭐ 8.2</div>
                 </div>
             </div>
             <div class="movie-card">
                 <div class="movie-poster">🎞️</div>
                 <div class="movie-info">
-                    <h4>Фильм 2</h4>
+                    <h4>Film 2</h4>
                     <div class="movie-rating">⭐ 7.9</div>
                 </div>
             </div>
             <div class="movie-card">
                 <div class="movie-poster">🎞️</div>
                 <div class="movie-info">
-                    <h4>Фильм 3</h4>
+                    <h4>Film 3</h4>
                     <div class="movie-rating">⭐ 8.5</div>
                 </div>
             </div>
             <div class="movie-card">
                 <div class="movie-poster">🎞️</div>
                 <div class="movie-info">
-                    <h4>Фильм 4</h4>
+                    <h4>Film 4</h4>
                     <div class="movie-rating">⭐ 7.6</div>
                 </div>
             </div>
@@ -107,8 +102,8 @@
         margin: 0 auto;
         padding: 20px;
     }
-
     /* Hero Section */
+    
     .hero-section {
         padding: 60px 0;
         text-align: center;
@@ -117,7 +112,7 @@
         margin-bottom: 40px;
         border: 1px solid #e5e5e5;
     }
-
+    
     .hero-title {
         font-size: 3rem;
         font-weight: 700;
@@ -128,11 +123,11 @@
         justify-content: center;
         gap: 12px;
     }
-
+    
     .hero-icon {
         font-size: 2.5rem;
     }
-
+    
     .hero-subtitle {
         font-size: 1.2rem;
         color: #666;
@@ -142,8 +137,8 @@
         margin-left: auto;
         margin-right: auto;
     }
-
     /* Welcome Card */
+    
     .welcome-card {
         background: #fff;
         border: 2px solid #ff6b35;
@@ -153,7 +148,7 @@
         max-width: 400px;
         box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
     }
-
+    
     .welcome-header {
         display: flex;
         align-items: center;
@@ -161,23 +156,23 @@
         gap: 12px;
         margin-bottom: 16px;
     }
-
+    
     .welcome-icon {
         font-size: 24px;
     }
-
+    
     .welcome-text {
         font-size: 1.1rem;
         color: #ff6b35;
         font-weight: 600;
     }
-
+    
     .welcome-message {
         color: #666;
         margin-bottom: 20px;
         text-align: center;
     }
-
+    
     .profile-btn {
         display: inline-block;
         background: #ff6b35;
@@ -190,15 +185,15 @@
         border: none;
         cursor: pointer;
     }
-
+    
     .profile-btn:hover {
         background: #e55a2b;
         transform: translateY(-2px);
         text-decoration: none;
         color: white;
     }
-
     /* Auth Card */
+    
     .auth-card {
         background: #fff;
         border: 1px solid #e5e5e5;
@@ -207,22 +202,23 @@
         margin: 0 auto;
         max-width: 400px;
     }
-
+    
     .auth-message {
         color: #666;
         margin-bottom: 24px;
         font-size: 1.05rem;
         text-align: center;
     }
-
+    
     .auth-buttons {
         display: flex;
         gap: 16px;
         justify-content: center;
         flex-wrap: wrap;
     }
-
-    .login-btn, .register-btn {
+    
+    .login-btn,
+    .register-btn {
         display: inline-block;
         padding: 12px 24px;
         border-radius: 6px;
@@ -232,44 +228,44 @@
         min-width: 140px;
         text-align: center;
     }
-
+    
     .login-btn {
         background: #ff6b35;
         color: white;
         border: 2px solid #ff6b35;
     }
-
+    
     .login-btn:hover {
         background: #e55a2b;
         transform: translateY(-2px);
         text-decoration: none;
         color: white;
     }
-
+    
     .register-btn {
         background: #4299e1;
         color: white;
         border: 2px solid #4299e1;
     }
-
+    
     .register-btn:hover {
         background: #3182ce;
         transform: translateY(-2px);
         text-decoration: none;
         color: white;
     }
-
     /* Features Section */
+    
     .features-section {
         margin-bottom: 60px;
     }
-
+    
     .features-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 24px;
     }
-
+    
     .feature-card {
         background: #fff;
         border: 1px solid #e5e5e5;
@@ -278,36 +274,36 @@
         text-align: center;
         transition: all 0.3s ease;
     }
-
+    
     .feature-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         border-color: #ff6b35;
     }
-
+    
     .feature-icon {
         font-size: 48px;
         margin-bottom: 16px;
     }
-
+    
     .feature-title {
         color: #ff6b35;
         margin-bottom: 12px;
         font-size: 1.3rem;
         font-weight: 600;
     }
-
+    
     .feature-description {
         color: #666;
         font-size: 0.95rem;
         line-height: 1.5;
     }
-
     /* Movies Preview */
+    
     .movies-preview {
         margin-bottom: 40px;
     }
-
+    
     .section-title {
         font-size: 1.8rem;
         color: #333;
@@ -315,13 +311,13 @@
         text-align: center;
         font-weight: 600;
     }
-
+    
     .movies-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 20px;
     }
-
+    
     .movie-card {
         background: #fff;
         border: 1px solid #e5e5e5;
@@ -329,12 +325,12 @@
         overflow: hidden;
         transition: all 0.3s ease;
     }
-
+    
     .movie-card:hover {
         transform: translateY(-3px);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
-
+    
     .movie-poster {
         height: 250px;
         background: #f8f8f8;
@@ -344,62 +340,56 @@
         font-size: 48px;
         border-bottom: 1px solid #e5e5e5;
     }
-
+    
     .movie-info {
         padding: 15px;
     }
-
+    
     .movie-info h4 {
         color: #333;
         margin-bottom: 8px;
         font-weight: 600;
     }
-
+    
     .movie-rating {
         color: #ff6b35;
         font-weight: 600;
     }
-
     /* Responsive */
+    
     @media (max-width: 768px) {
         .hero-title {
             font-size: 2.2rem;
             flex-direction: column;
             gap: 8px;
         }
-
         .hero-subtitle {
             font-size: 1.1rem;
             padding: 0 15px;
         }
-
         .auth-buttons {
             flex-direction: column;
             align-items: center;
         }
-
-        .login-btn, .register-btn {
+        .login-btn,
+        .register-btn {
             width: 200px;
         }
-
         .features-grid {
             grid-template-columns: 1fr;
         }
-
         .movies-grid {
             grid-template-columns: repeat(2, 1fr);
         }
     }
-
+    
     @media (max-width: 480px) {
         .movies-grid {
             grid-template-columns: 1fr;
         }
-        
         .hero-section {
             padding: 40px 0;
         }
-        
         .home-container {
             padding: 10px;
         }
