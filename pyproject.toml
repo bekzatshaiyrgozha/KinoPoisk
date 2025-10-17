@@ -23,5 +23,6 @@ dependencies = [
     "pyparsing==3.2.5",
     "python-decouple==3.8",
     "sqlparse==0.5.3",
-    "faker"
+    "faker",
+    "drf-spectacular"
 ]
