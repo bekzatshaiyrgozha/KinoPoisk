@@ -1,2 +1,1 @@
-from django.contrib import admin
-
+# Registration doesn't required

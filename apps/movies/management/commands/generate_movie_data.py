@@ -1,0 +1,143 @@
+# Python modules
+from typing import Any
+from random import choice, randint
+from datetime import datetime
+
+# Django modules
+from django.core.management.base import BaseCommand
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
+from django.db import transaction
+
+# Third-party modules
+from faker import Faker
+
+# Project modules
+from apps.movies.models import Movie, Comment, Rating, Like
+from django.contrib.contenttypes.models import ContentType
+
+
+fake = Faker()
+Faker.seed(42)
+
+
+class Command(BaseCommand):
+    help = "Generate fake data for movies, users, comments, ratings, and likes."
+
+    USER_COUNT = 20
+    MOVIE_COUNT = 15
+    MAX_COMMENTS = 60
+    MAX_LIKES = 100
+    MAX_RATINGS = 40
+
+    @transaction.atomic
+    def handle(self, *args: Any, **options: Any) -> None:
+        start = datetime.now()
+        self.stdout.write(self.style.NOTICE("Clearing old data..."))
+        self._clear_old_data()
+
+        self.stdout.write(self.style.NOTICE("Generating fake data..."))
+
+        users = self._generate_users()
+        movies = self._generate_movies()
+        comments = self._generate_comments(users, movies)
+        self._generate_ratings(users, movies)
+        self._generate_likes(users, movies, comments)
+
+        elapsed = (datetime.now() - start).total_seconds()
+        self.stdout.write(
+            self.style.SUCCESS(f"\n Done in {elapsed:.2f} seconds.")
+        )
+
+    def _clear_old_data(self):
+        Like.objects.all().delete()
+        Comment.objects.all().delete()
+        Rating.objects.all().delete()
+        Movie.objects.all().delete()
+        User.objects.filter(is_superuser=False, is_staff=False).delete()
+
+    def _generate_users(self):
+        self.stdout.write("Creating users...")
+        users = [
+            User(
+                username=f"user{i}",
+                first_name=fake.first_name(),
+                last_name=fake.last_name(),
+                email=fake.email(),
+                password=make_password("password123"),
+            )
+            for i in range(self.USER_COUNT)
+        ]
+        User.objects.bulk_create(users)
+        self.stdout.write(self.style.SUCCESS(f"→ {len(users)} users created."))
+        return list(User.objects.all())
+
+    def _generate_movies(self):
+        self.stdout.write("Creating movies...")
+        movies = []
+        for _ in range(self.MOVIE_COUNT):
+            title = fake.sentence(nb_words=3).replace(".", "")
+            description = fake.paragraph(nb_sentences=6)
+            genre = choice(["Action", "Drama", "Comedy", "Sci-Fi", "Thriller", "Romance"])
+            duration = randint(60, 180)
+            year = randint(1980, 2025)
+            movies.append(
+                Movie(
+                    title=title,
+                    description=description,
+                    genre=genre,
+                    duration=duration,
+                    year=year,
+                )
+            )
+        Movie.objects.bulk_create(movies)
+        self.stdout.write(self.style.SUCCESS(f"→ {len(movies)} movies created."))
+        return list(Movie.objects.all())
+
+    def _generate_comments(self, users, movies):
+        self.stdout.write("Creating comments...")
+        comments = []
+        for _ in range(randint(self.MAX_COMMENTS // 2, self.MAX_COMMENTS)):
+            user = choice(users)
+            movie = choice(movies)
+            text = fake.sentence(nb_words=20)
+            comments.append(Comment(movie=movie, user=user, text=text))
+        Comment.objects.bulk_create(comments)
+        self.stdout.write(self.style.SUCCESS(f"→ {len(comments)} comments created."))
+        return list(Comment.objects.all())
+
+    def _generate_ratings(self, users, movies):
+        self.stdout.write("Creating ratings...")
+        ratings = []
+        for _ in range(randint(self.MAX_RATINGS // 2, self.MAX_RATINGS)):
+            user = choice(users)
+            movie = choice(movies)
+            score = randint(1, 5)
+            if not Rating.objects.filter(user=user, movie=movie).exists():
+                ratings.append(Rating(user=user, movie=movie, score=score))
+        Rating.objects.bulk_create(ratings)
+        self.stdout.write(self.style.SUCCESS(f"→ {len(ratings)} ratings created."))
+
+    def _generate_likes(self, users, movies, comments):
+        self.stdout.write("Creating likes...")
+
+        like_objects = []
+        movie_ct = ContentType.objects.get_for_model(Movie)
+        comment_ct = ContentType.objects.get_for_model(Comment)
+
+        for _ in range(randint(self.MAX_LIKES // 2, self.MAX_LIKES)):
+            user = choice(users)
+            if choice([True, False]):
+                obj = choice(movies)
+                ct = movie_ct
+            else:
+                obj = choice(comments)
+                ct = comment_ct
+
+            if not Like.objects.filter(
+                user=user, content_type=ct, object_id=obj.id
+            ).exists():
+                like_objects.append(Like(user=user, content_type=ct, object_id=obj.id))
+
+        Like.objects.bulk_create(like_objects)
+        self.stdout.write(self.style.SUCCESS(f"→ {len(like_objects)} likes created."))

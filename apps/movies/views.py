@@ -1,3 +1,364 @@
-from django.shortcuts import render
+# Third-party modules
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-# Create your views here.
+# Django modules
+from django.http import HttpRequest
+from django.db.models import Avg
+from django.contrib.contenttypes.models import ContentType
+
+# Third-party modules
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
+# Project modules
+from .models import Movie, Comment, Like, Rating
+from .serializers import (
+    MovieSerializer, 
+    CommentSerializer,
+    RatingSerializer
+)
+
+# Typing imports
+from typing import Optional, Type
+from django.db.models.query import QuerySet
+from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType as ContentTypeModel
+from django.db.models.base import ModelBase
+
+
+class MovieListView(APIView):
+    """
+    View to list all movies.
+    Only authenticated users can access.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='List all movies',
+        operation_description='Get a list of all movies with average ratings',
+        responses={
+            status.HTTP_200_OK: openapi.Response('List of movies', MovieSerializer(many=True))
+        }
+    )
+    def get(
+            self, request: HttpRequest,
+            *args, **kwargs
+        ) -> Response:
+        """
+        Return all movies with average rating and like count.
+
+        Params:
+            - request: HttpRequest
+            - *args
+            - **kwargs
+        Return:
+            - response: Response
+        """
+        movies: QuerySet[Movie] = Movie.objects.annotate(
+            average_rating=Avg('ratings__score')
+        )
+        serializer: MovieSerializer = MovieSerializer(
+            movies, many=True
+        )
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+
+class MovieDetailView(APIView):
+    """
+    View to retrieve a specific movie.
+    Only authenticated users can access.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Get movie details',
+        operation_description='Get details of a specific movie with average rating',
+        responses={
+            status.HTTP_200_OK: openapi.Response('Movie details', MovieSerializer),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Movie not found')
+        }
+    )
+    def get(
+            self, request: HttpRequest,
+            movie_id: int,
+            *args, **kwargs
+        ) -> Response:
+        """
+        Return a specific movie with average rating and like count.
+
+        Params:
+            - request: HttpRequest
+            - movie_id: int - specific movie ID
+            - *args
+            - **kwargs
+        Return:
+            - response: Response
+        """
+        try:
+            movie: Movie = Movie.objects.annotate(
+                average_rating=Avg('ratings__score')
+            ).get(id=movie_id)
+        except Movie.DoesNotExist:
+            return Response(
+                {'detail': 'Movie not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer: MovieSerializer = MovieSerializer(movie)
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+
+class CommentView(APIView):
+    """
+    View for listing and creating comments under a specific movie.
+    Only authenticated users can access.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='List movie comments',
+        operation_description='Get all comments for a specific movie',
+        responses={
+            status.HTTP_200_OK: openapi.Response('List of comments', CommentSerializer(many=True))
+        }
+    )
+    def get(
+            self, request: HttpRequest, 
+            movie_id: int, 
+            *args, **kwargs
+        ) -> Response:
+        """
+        List all comments for a movie (including replies).
+        
+        Params:
+            - request: HttpRequest
+            - movie_id: int
+            - *args
+            - **kwargs
+        Return:
+            - response: Response    
+        """
+        comments: QuerySet[Comment] = Comment.objects.filter(
+            movie_id=movie_id, parent=None
+        )
+        serializer: CommentSerializer = CommentSerializer(
+            comments, many=True
+        )
+        return Response(
+            serializer.data, 
+            status=status.HTTP_200_OK
+        )
+    
+    @swagger_auto_schema(
+        operation_summary='Create a comment',
+        operation_description='Create a new comment for a movie or reply to an existing comment',
+        request_body=CommentSerializer,
+        responses={
+            status.HTTP_201_CREATED: openapi.Response('Comment created', CommentSerializer),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid data'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Movie not found')
+        }
+    )
+    def post(
+            self, request: HttpRequest, 
+            movie_id: int,
+            *args, **kwargs
+        ) -> Response:
+        """
+        Create a new comment (optionally as a reply).
+        
+        Params:
+            - request: HttpRequest
+            - movie_id: int
+            - *args
+            - **kwargs
+        Return:
+            - response: Response
+        """
+        try:
+            movie: Movie = Movie.objects.get(id=movie_id)
+        except Movie.DoesNotExist:
+            return Response(
+                {'detail': 'Movie not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer: CommentSerializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user, movie=movie)
+            return Response(
+                serializer.data, 
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            serializer.errors, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class LikeView(APIView):
+    """
+    Generic Like/Unlike view.
+    Works for both movies and comments.
+    Only authenticated users can access.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Like/Unlike content',
+        operation_description='Like or unlike a movie or comment',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'content_type': openapi.Schema(type=openapi.TYPE_STRING, enum=['movie', 'comment'], description='Type of content to like'),
+                'object_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the object to like')
+            },
+            required=['content_type', 'object_id']
+        ),
+        responses={
+            status.HTTP_201_CREATED: openapi.Response('Object liked'),
+            status.HTTP_200_OK: openapi.Response('Object unliked'),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid content_type or missing fields'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Object not found')
+        }
+    )
+    def post(
+            self, request: HttpRequest, 
+            *args, **kwargs
+        ) -> Response:
+        """
+        Like or unlike an object (movie or comment).
+
+        Required JSON body:
+        {
+            "content_type": "movie" | "comment",
+            "object_id": int
+        }
+        Params:
+            - request: HttpRequest
+            - *args
+            - **kwargs
+        Return:
+            - response: Response
+        """
+        content_type_str: Optional[str] = request.data.get("content_type")
+        object_id: Optional[int] = request.data.get("object_id")
+
+        if not content_type_str or not object_id:
+            return Response(
+                {"detail": "content_type and object_id are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            ct: ContentTypeModel = ContentType.objects.get(model=content_type_str)
+        except ContentType.DoesNotExist:
+            return Response({"detail": "Invalid content_type."}, status=status.HTTP_400_BAD_REQUEST)
+
+        obj_model: Type[ModelBase] = ct.model_class()
+
+        try:
+            obj: ModelBase = obj_model.objects.get(id=object_id)
+        except obj_model.DoesNotExist:
+            return Response(
+                {"detail": "Object not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        user: User = request.user
+        existing_like: Optional[Like] = Like.objects.filter(
+            user=user, 
+            content_type=ct, 
+            object_id=object_id
+        ).first()
+
+        if existing_like:
+            existing_like.delete()
+            return Response(
+                {"detail": f"{content_type_str.capitalize()} unliked."},
+                status=status.HTTP_200_OK
+            )
+
+        Like.objects.create(
+            user=user, 
+            content_type=ct, 
+            object_id=object_id
+        )
+        return Response(
+            {"detail": f"{content_type_str.capitalize()} liked."},
+            status=status.HTTP_201_CREATED
+        )
+
+
+class RatingView(APIView):
+    """
+    View to rate a movie or update the rating.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Rate a movie',
+        operation_description='Rate a movie with a score from 1 to 5',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'score': openapi.Schema(type=openapi.TYPE_INTEGER, description='Rating score (1-5)')
+            },
+            required=['score']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response('Rating created or updated', RatingSerializer),
+            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid score or missing field'),
+            status.HTTP_404_NOT_FOUND: openapi.Response('Movie not found')
+        }
+    )
+    def post(
+            self, request: HttpRequest, 
+            movie_id: int, 
+            *args, **kwargs
+        ) -> Response:
+        """
+        Rate a specific movie (score 1–5).
+        Body: { "score": 4 }
+        Params:
+            - request: HttpRequest
+            - movie_id: int
+            - *args
+            - **kwargs
+        Return:
+            - response: Response
+        """
+        try:
+            movie: Movie = Movie.objects.get(id=movie_id)
+        except Movie.DoesNotExist:
+            return Response(
+                {'detail': 'Movie not found.'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        score: Optional[int] = request.data.get("score")
+        if score is None or not (1 <= int(score) <= 5):
+            return Response(
+                {'detail': 'Score must be between 1 and 5.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        rating: Rating
+        rating, _ = Rating.objects.update_or_create(
+            user=request.user,
+            movie=movie,
+            defaults={'score': score},
+        )
+        serializer: RatingSerializer = RatingSerializer(rating)
+        return Response(
+            serializer.data, 
+            status=status.HTTP_200_OK
+        )

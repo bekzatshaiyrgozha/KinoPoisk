@@ -1,13 +1,14 @@
 FROM python:3.12-slim
- 
+
 WORKDIR /backend
 
-COPY requirements.txt . 
+COPY pyproject.toml ./
 
-RUN pip install -r requirements.txt 
-
-EXPOSE 8000
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install .
 
 COPY . .
 
-CMD ["gunicorn", "settings.wsgi:application", "--bind", "0.0.0.0:8000"]
+EXPOSE 8000
+
+CMD ["bash", "-c", "python3 manage.py makemigrations && python3 manage.py migrate && gunicorn settings.wsgi:application --bind 0.0.0.0:8000"]
