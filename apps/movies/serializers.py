@@ -45,8 +45,21 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_replies(self, obj):
         """Return nested replies for a comment"""
+        from rest_framework import serializers
         replies = obj.replies.all()
-        return CommentSerializer(replies, many=True).data
+        # Create a simple serializer for replies to avoid circular reference
+        return [
+            {
+                'id': reply.id,
+                'user': str(reply.user),
+                'text': reply.text,
+                'parent': reply.parent_id,
+                'likes_count': reply.likes_count,
+                'created_at': reply.created_at,
+                'updated_at': reply.updated_at
+            }
+            for reply in replies
+        ]
 
 
 class LikeSerializer(serializers.ModelSerializer):

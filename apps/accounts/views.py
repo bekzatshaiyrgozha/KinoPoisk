@@ -11,8 +11,6 @@ from django.http import HttpRequest
 
 # Third-party modules
 from rest_framework_simplejwt.tokens import RefreshToken
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 # Project modules
 from .serializers import (
@@ -27,14 +25,6 @@ from django.contrib.auth.models import User
 from rest_framework.serializers import Serializer
 
 
-@swagger_auto_schema(
-    method='post',
-    request_body=UserRegistrationSerializer,
-    responses={
-        status.HTTP_201_CREATED: openapi.Response('User registered', UserSerializer),
-        status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid data')
-    }
-)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(
@@ -69,14 +59,6 @@ def register(
     )
 
 
-@swagger_auto_schema(
-    method='post',
-    request_body=UserLoginSerializer,
-    responses={
-        status.HTTP_200_OK: openapi.Response('Login successful', UserSerializer),
-        status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid credentials')
-    }
-)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(
@@ -117,19 +99,6 @@ class LogoutView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'refresh': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh token')
-            },
-            required=['refresh']
-        ),
-        responses={
-            status.HTTP_200_OK: openapi.Response('Successfully logged out'),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid or missing token')
-        }
-    )
     def post(
             self, request: HttpRequest, 
             *args: Any, **kwargs: Any
@@ -171,11 +140,6 @@ class UserProfileView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        responses={
-            status.HTTP_200_OK: openapi.Response('User profile', UserSerializer)
-        }
-    )
     def get(
             self, request: HttpRequest, 
             *args: Any, **kwargs: Any
@@ -196,13 +160,6 @@ class UserProfileView(APIView):
             status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        request_body=UserSerializer,
-        responses={
-            status.HTTP_200_OK: openapi.Response('Profile updated', UserSerializer),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid data')
-        }
-    )
     def put(
             self, request: HttpRequest, 
             *args: Any, **kwargs: Any

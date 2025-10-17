@@ -9,9 +9,6 @@ from django.http import HttpRequest
 from django.db.models import Avg
 from django.contrib.contenttypes.models import ContentType
 
-# Third-party modules
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 # Project modules
 from .models import Movie, Comment, Like, Rating
@@ -36,13 +33,6 @@ class MovieListView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary='List all movies',
-        operation_description='Get a list of all movies with average ratings',
-        responses={
-            status.HTTP_200_OK: openapi.Response('List of movies', MovieSerializer(many=True))
-        }
-    )
     def get(
             self, request: HttpRequest,
             *args, **kwargs
@@ -76,14 +66,6 @@ class MovieDetailView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary='Get movie details',
-        operation_description='Get details of a specific movie with average rating',
-        responses={
-            status.HTTP_200_OK: openapi.Response('Movie details', MovieSerializer),
-            status.HTTP_404_NOT_FOUND: openapi.Response('Movie not found')
-        }
-    )
     def get(
             self, request: HttpRequest,
             movie_id: int,
@@ -123,13 +105,6 @@ class CommentView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary='List movie comments',
-        operation_description='Get all comments for a specific movie',
-        responses={
-            status.HTTP_200_OK: openapi.Response('List of comments', CommentSerializer(many=True))
-        }
-    )
     def get(
             self, request: HttpRequest, 
             movie_id: int, 
@@ -157,16 +132,6 @@ class CommentView(APIView):
             status=status.HTTP_200_OK
         )
     
-    @swagger_auto_schema(
-        operation_summary='Create a comment',
-        operation_description='Create a new comment for a movie or reply to an existing comment',
-        request_body=CommentSerializer,
-        responses={
-            status.HTTP_201_CREATED: openapi.Response('Comment created', CommentSerializer),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid data'),
-            status.HTTP_404_NOT_FOUND: openapi.Response('Movie not found')
-        }
-    )
     def post(
             self, request: HttpRequest, 
             movie_id: int,
@@ -212,24 +177,6 @@ class LikeView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary='Like/Unlike content',
-        operation_description='Like or unlike a movie or comment',
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'content_type': openapi.Schema(type=openapi.TYPE_STRING, enum=['movie', 'comment'], description='Type of content to like'),
-                'object_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the object to like')
-            },
-            required=['content_type', 'object_id']
-        ),
-        responses={
-            status.HTTP_201_CREATED: openapi.Response('Object liked'),
-            status.HTTP_200_OK: openapi.Response('Object unliked'),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid content_type or missing fields'),
-            status.HTTP_404_NOT_FOUND: openapi.Response('Object not found')
-        }
-    )
     def post(
             self, request: HttpRequest, 
             *args, **kwargs
@@ -304,22 +251,6 @@ class RatingView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary='Rate a movie',
-        operation_description='Rate a movie with a score from 1 to 5',
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'score': openapi.Schema(type=openapi.TYPE_INTEGER, description='Rating score (1-5)')
-            },
-            required=['score']
-        ),
-        responses={
-            status.HTTP_200_OK: openapi.Response('Rating created or updated', RatingSerializer),
-            status.HTTP_400_BAD_REQUEST: openapi.Response('Invalid score or missing field'),
-            status.HTTP_404_NOT_FOUND: openapi.Response('Movie not found')
-        }
-    )
     def post(
             self, request: HttpRequest, 
             movie_id: int, 
