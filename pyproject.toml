@@ -25,5 +25,6 @@ dependencies = [
     "sqlparse==0.5.3",
     "faker",
     "drf-spectacular",
-    "whitenoise"
+    "whitenoise", 
+    "django-unfold"
 ]

@@ -78,52 +78,21 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
         'OPTIONS': {
-            'user_attributes': ('username', 'email', 'first_name', 'last_name'),
-            'help_text': 'Password should not contain information from your profile.',
+            'user_attributes': ('username', 'email'),
+            'max_similarity': 0.7,
         }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 12,
-            'help_text': 'Password should be at least 12 characters long.',
-        }
+        'OPTIONS': {'min_length': 4},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-        'OPTIONS': {
-            'help_text': 'Password should not be simple and frequently used.',
-        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-        'OPTIONS': {
-            'help_text': 'Password should not contain only numbers.',
-        }
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.SpecialCharacterValidator',
-        'OPTIONS': {
-            'min_length': 1,
-            'help_text': 'Password should contain at least one special character.',
-        }
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.UppercaseValidator',
-        'OPTIONS': {
-            'min_length': 1,
-            'help_text': 'Password should contain at least one uppercase letter.',
-        }
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.LowercaseValidator',
-        'OPTIONS': {
-            'min_length': 1,
-            'help_text': 'Password should contain at least one lowercase letter.',
-        }
     },
 ]
 
