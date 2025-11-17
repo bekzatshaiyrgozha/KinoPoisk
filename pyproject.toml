@@ -24,5 +24,6 @@ dependencies = [
     "python-decouple==3.8",
     "sqlparse==0.5.3",
     "faker",
-    "drf-spectacular"
+    "drf-spectacular",
+    "whitenoise"
 ]
