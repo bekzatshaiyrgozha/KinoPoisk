@@ -1,0 +1,94 @@
+import { useParams } from 'react-router-dom';
+import { FaClock, FaCalendar, FaHeart } from 'react-icons/fa';
+import { Loader, Card, Badge } from '@/components/ui';
+import { RatingStars } from '@/components/features/movies';
+import { useMovie } from '@/hooks';
+import { formatDuration, formatLikesCount } from '@/utils';
+
+export const MovieDetailPage = () => {
+  const { id } = useParams<{ id: string }>();
+  const { movie, loading, error } = useMovie(Number(id));
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4">
+        <Loader size="lg" className="py-20" />
+      </div>
+    );
+  }
+
+  if (error || !movie) {
+    return (
+      <div className="container mx-auto px-4">
+        <div className="text-center py-12">
+          <p className="text-red-600 text-lg">{error || 'Фильм не найден'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4">
+      <Card padding="lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-1">
+            <div className="aspect-[2/3] bg-gray-200 rounded-lg overflow-hidden">
+              {movie.poster ? (
+                <img
+                  src={movie.poster}
+                  alt={movie.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  No Poster
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="md:col-span-2 space-y-6">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                {movie.title}
+              </h1>
+              <div className="flex items-center gap-4 text-gray-600">
+                <div className="flex items-center gap-2">
+                  <FaCalendar />
+                  <span>{movie.year}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FaClock />
+                  <span>{formatDuration(movie.duration)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Badge variant="default" size="md">
+                {movie.genre}
+              </Badge>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <RatingStars rating={movie.average_rating} readonly size="lg" />
+                <div className="flex items-center gap-2 text-gray-600">
+                  <FaHeart className="text-red-500" />
+                  <span className="font-medium">{formatLikesCount(movie.likes_count)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Описание
+              </h2>
+              <p className="text-gray-700 leading-relaxed">{movie.description}</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};
