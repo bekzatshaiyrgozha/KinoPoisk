@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -9,18 +9,6 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-  backend:
-    build: .
-    volumes:
-      - .:/backend
-    ports: 
-      - "8000:8000"
-    env_file:
-      - .env
-    depends_on:
-      - postgres
-    environment:
-      POSTGRESQL_URL: ${POSTGRESQL_URL}
   pgadmin4:
     image: dpage/pgadmin4:latest
     environment:
@@ -32,8 +20,30 @@ services:
       - postgres
     volumes:
       - pgadmin-data:/var/lib/pgadmin
-  
+  backend:
+    build:
+      context: .
+      dockerfile: dockerfiles/backend.Dockerfile
+    volumes:
+      - ./backend:/app
+    ports: 
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  frontend:
+    build:
+      context: .
+      dockerfile: dockerfiles/frontend.Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
 volumes:
   pgdata:
   pgadmin-data:
+
     
