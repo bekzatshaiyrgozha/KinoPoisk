@@ -26,5 +26,7 @@ dependencies = [
     "faker",
     "drf-spectacular",
     "whitenoise", 
-    "django-unfold"
+    "django-unfold", 
+    "psycopg2-binary", 
+    "dj-database-url"
 ]

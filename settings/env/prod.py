@@ -1,36 +1,18 @@
 # Project modules
 from settings.base import *
+from settings.conf import POSTGRESQL_URL
+
+# Third-party modules
+import dj_database_url
 
 
 DEBUG = False
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["localhost:8000"]
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME':  'db.sqlite3',
-    }
-}
-# Project modules
-from settings.base import *
-
-
-DEBUG = False
-ALLOWED_HOSTS = ['*']
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME':  'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=POSTGRESQL_URL,
+    )
 }
 
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOW_CREDENTIALS = False
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
-
-
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
