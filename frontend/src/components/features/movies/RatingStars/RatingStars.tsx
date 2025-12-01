@@ -3,7 +3,7 @@ import { FaStar, FaRegStar } from 'react-icons/fa';
 import { cn } from '@/utils';
 
 interface RatingStarsProps {
-  rating: number;
+  rating: number | null;
   onRate?: (rating: number) => void;
   readonly?: boolean;
   size?: 'sm' | 'md' | 'lg';
@@ -19,7 +19,7 @@ export const RatingStars = ({
 }: RatingStarsProps) => {
   const [hoverRating, setHoverRating] = useState(0);
 
-  const displayRating = hoverRating || rating;
+  const displayRating = hoverRating || rating || 0;
 
   const handleClick = (value: number) => {
     if (!readonly && onRate) {
@@ -59,7 +59,7 @@ export const RatingStars = ({
       ))}
       {showValue && (
         <span className="ml-2 text-sm text-gray-600 font-medium">
-          {rating.toFixed(1)}
+          {rating ? rating.toFixed(1) : 'N/A'}
         </span>
       )}
     </div>

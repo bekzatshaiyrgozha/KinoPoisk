@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 # Django modules
 from django.http import HttpRequest
-from django.db.models import Avg
+from django.db.models import Avg, Count
 from django.contrib.contenttypes.models import ContentType
 
 
@@ -48,8 +48,10 @@ class MovieListView(APIView):
         Return:
             - response: Response
         """
+        
         movies: QuerySet[Movie] = Movie.objects.annotate(
-            average_rating=Avg('ratings__score')
+            average_rating=Avg('ratings__score'),
+            likes_count=Count('likes', distinct=True)
         )
         serializer: MovieSerializer = MovieSerializer(
             movies, many=True

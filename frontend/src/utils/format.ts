@@ -11,7 +11,10 @@ export const formatRelativeTime = (date: string | Date): string => {
   return formatDistanceToNow(dateObj, { addSuffix: true, locale: ru });
 };
 
-export const formatRating = (rating: number): string => {
+export const formatRating = (rating: number | null | undefined): string => {
+  if (!rating && rating !== 0) {
+    return 'N/A';
+  }
   return rating.toFixed(1);
 };
 
@@ -21,7 +24,10 @@ export const formatDuration = (minutes: number): string => {
   return `${hours}ч ${mins}мин`;
 };
 
-export const formatLikesCount = (count: number): string => {
+export const formatLikesCount = (count: number | null | undefined): string => {
+  if (!count || count === 0) {
+    return '0';
+  }
   if (count >= 1000000) {
     return `${(count / 1000000).toFixed(1)}M`;
   }
