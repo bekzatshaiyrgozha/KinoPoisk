@@ -141,6 +141,27 @@ REST_FRAMEWORK = {
 
 }
 
+"""
+drf-spectacular configuration
+"""
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'KinoPoisk API',
+    'VERSION': '1.2.3',
+    'SERVE_INCLUDE_SCHEMA': True,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'Bearer': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    },
+    'SECURITY': [{'Bearer': []}],
+}
+
 '''
 INTERNATIONALIZATION
 '''
