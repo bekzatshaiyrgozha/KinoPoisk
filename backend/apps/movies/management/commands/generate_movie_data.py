@@ -115,13 +115,6 @@ class Command(BaseCommand):
         ratings = []
         created_pairs = set()
         
-        # Get existing ratings to avoid duplicates
-        existing_ratings = set(
-            Rating.objects.filter(
-                user__in=users, movie__in=movies
-            ).values_list('user_id', 'movie_id')
-        )
-        
         target_count = randint(self.MAX_RATINGS // 2, self.MAX_RATINGS)
         attempts = 0
         max_attempts = target_count * 3
@@ -131,13 +124,13 @@ class Command(BaseCommand):
             movie = choice(movies)
             pair = (user.id, movie.id)
             
-            if pair not in created_pairs and pair not in existing_ratings:
+            if pair not in created_pairs:
                 score = randint(1, 5)
                 ratings.append(Rating(user=user, movie=movie, score=score))
                 created_pairs.add(pair)
             attempts += 1
             
-        Rating.objects.bulk_create(ratings, ignore_conflicts=True)
+        Rating.objects.bulk_create(ratings)
         self.stdout.write(self.style.SUCCESS(f"→ {len(ratings)} ratings created."))
 
     def _generate_likes(self, users, movies, comments):
