@@ -182,3 +182,74 @@ class Like(AbstractBaseModel):
 
     def __str__(self):
         return f'{self.user.username} likes {self.content_object}'
+    
+
+class Review(AbstractBaseModel):
+    """
+    Review model representing a user's detailed review of a movie.
+    
+    Fields:
+        - user: ForeignKey to the User model
+        - movie: ForeignKey to the Movie model
+        - title: Title of the review
+        - text: Detailed review text
+        - rating: Rating score (1-5) associated with this review
+    """
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='reviews'
+    )
+    movie = models.ForeignKey(
+        Movie, 
+        on_delete=models.CASCADE, 
+        related_name='reviews'
+    )
+    title = models.CharField(
+        max_length=NAME_MAX_LENGTH,
+        help_text="Review title"
+    )
+    text = models.TextField(
+        help_text="Detailed review content"
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(MIN_RATING), 
+            MaxValueValidator(MAX_RATING)
+        ],
+        help_text="Rating score (1-5)"
+    )
+
+    class Meta:
+        unique_together = ('user', 'movie')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Review by {self.user.username} for {self.movie.title}'
+
+
+class Favorite(AbstractBaseModel):
+    """
+    Favorite model representing a user's favorite movies.
+    
+    Fields:
+        - user: ForeignKey to the User model
+        - movie: ForeignKey to the Movie model
+    """
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='favorites'
+    )
+    movie = models.ForeignKey(
+        Movie, 
+        on_delete=models.CASCADE, 
+        related_name='favorited_by'
+    )
+
+    class Meta:
+        unique_together = ('user', 'movie')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user.username} favorited {self.movie.title}'

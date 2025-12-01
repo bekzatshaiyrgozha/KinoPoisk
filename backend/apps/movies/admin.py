@@ -3,8 +3,21 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 # Project modules
-from .models import Movie, Comment, Rating, Like
+from .models import Movie, Comment, Rating, Like, Review, Favorite
 
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'movie', 'title', 'rating', 'created_at']
+    list_filter = ['rating', 'created_at']
+    search_fields = ['title', 'text', 'user__username', 'movie__title']
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'movie', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'movie__title']
 
 class CommentInline(admin.TabularInline):
     """Inline comments in Movie admin."""
