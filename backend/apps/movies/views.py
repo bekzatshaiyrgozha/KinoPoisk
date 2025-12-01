@@ -1,6 +1,6 @@
 # Third-party modules
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -31,7 +31,7 @@ class MovieListView(APIView):
     View to list all movies.
     Only authenticated users can access.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(
             self, request: HttpRequest,
