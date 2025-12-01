@@ -17,13 +17,16 @@ class ApiClient {
   }
 
   private setupInterceptors(): void {
-    // Request interceptor - add token
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        const token = storage.get<string>(TOKEN_KEYS.ACCESS);
-
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
+        const isAuthEndpoint = config.url?.includes('/auth/login') || 
+                              config.url?.includes('/auth/register');
+        
+        if (!isAuthEndpoint) {
+          const token = storage.get<string>(TOKEN_KEYS.ACCESS);
+          if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
 
         return config;
@@ -33,39 +36,41 @@ class ApiClient {
       }
     );
 
-    // Response interceptor - handle errors
     this.client.interceptors.response.use(
       (response: AxiosResponse) => response,
       async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-        // Handle 401 Unauthorized
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
-          try {
-            // Try to refresh token
-            const refreshToken = storage.get<string>(TOKEN_KEYS.REFRESH);
-
-            if (refreshToken) {
-              // TODO: Implement token refresh when backend is ready
-              // const response = await this.client.post('/auth/token/refresh/', { refresh: refreshToken });
-              // storage.set(TOKEN_KEYS.ACCESS, response.data.access);
-              // return this.client(originalRequest);
+          const refreshToken = storage.get<string>(TOKEN_KEYS.REFRESH);
+          if (refreshToken) {
+            try {
+              const response = await this.client.post('/auth/token/refresh/', { 
+                refresh: refreshToken 
+              });
+              storage.set(TOKEN_KEYS.ACCESS, response.data.access, 60 * 60 * 1000);
+              
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+              }
+              return this.client(originalRequest);
+            } catch {
+              storage.remove(TOKEN_KEYS.ACCESS);
+              storage.remove(TOKEN_KEYS.REFRESH);
+              window.location.href = '/login';
             }
-          } catch (refreshError) {
-            // Refresh failed, clear tokens and redirect to login
+          } else {
             storage.remove(TOKEN_KEYS.ACCESS);
             storage.remove(TOKEN_KEYS.REFRESH);
             window.location.href = '/login';
-            return Promise.reject(refreshError);
           }
         }
 
-        // Transform error to ApiError format
         const apiError: ApiError = {
-          message: error.response?.data?.message || error.message || 'Произошла ошибка',
-          errors: error.response?.data?.errors,
+          message: (error.response?.data as any)?.message || error.message || 'Произошла ошибка',
+          errors: (error.response?.data as any)?.errors,
           status: error.response?.status,
         };
 
