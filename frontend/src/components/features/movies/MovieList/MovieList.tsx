@@ -7,7 +7,7 @@ interface MovieListProps {
 }
 
 export const MovieList = ({ movies, onMovieClick }: MovieListProps) => {
-  if (movies.length === 0) {
+  if (!movies || movies.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
         <p className="text-lg">Фильмы не найдены</p>
