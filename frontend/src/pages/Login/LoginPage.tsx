@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts';
 import { ROUTES, MESSAGES } from '@/constants';
 
 export const LoginPage = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +19,7 @@ export const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      await login({ username, password });
+      await login({ email, password });
       navigate(ROUTES.HOME);
     } catch (err: any) {
       setError(err.message || MESSAGES.ERROR.GENERIC);
@@ -41,11 +41,11 @@ export const LoginPage = () => {
           )}
 
           <Input
-            label="Имя пользователя"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Введите имя пользователя"
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Введите email"
             required
             fullWidth
           />

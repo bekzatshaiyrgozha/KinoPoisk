@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts';
 import { MainLayout } from './components/layout';
-import { HomePage, MovieDetailPage, LoginPage, RegisterPage, SearchPage } from './pages';
+import { HomePage, MovieDetailPage, LoginPage, RegisterPage, SearchPage, ProfilePage } from './pages';
 import { ROUTES } from './constants';
 
 function App() {
@@ -13,6 +13,7 @@ function App() {
             <Route path={ROUTES.HOME} element={<HomePage />} />
             <Route path={ROUTES.SEARCH} element={<SearchPage />} />
             <Route path={ROUTES.MOVIE_DETAIL} element={<MovieDetailPage />} />
+            <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
             <Route path={ROUTES.LOGIN} element={<LoginPage />} />
             <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
             <Route
