@@ -4,11 +4,28 @@ import type { Movie, MovieFilters, PaginatedResponse } from '@/types';
 
 export const movieService = {
   async getMovies(filters?: MovieFilters): Promise<PaginatedResponse<Movie>> {
-    const response = await apiClient.get<PaginatedResponse<Movie>>(
+    const response = await apiClient.get<PaginatedResponse<Movie> | Movie[]>(
       API_ENDPOINTS.MOVIES.LIST,
       { params: filters }
     );
-    return response.data;
+
+    const data = response.data as PaginatedResponse<Movie> | Movie[];
+
+    if (Array.isArray(data)) {
+      return {
+        count: data.length,
+        next: null,
+        previous: null,
+        results: data,
+      };
+    }
+
+    return {
+      count: data?.count ?? data?.results?.length ?? 0,
+      next: data?.next ?? null,
+      previous: data?.previous ?? null,
+      results: Array.isArray(data?.results) ? data.results : [],
+    };
   },
 
   async getMovie(id: number): Promise<Movie> {
@@ -19,10 +36,7 @@ export const movieService = {
   },
 
   async searchMovies(query: string): Promise<Movie[]> {
-    const response = await apiClient.get<PaginatedResponse<Movie>>(
-      API_ENDPOINTS.MOVIES.LIST,
-      { params: { search: query } }
-    );
-    return response.data.results;
+    const response = await movieService.getMovies({ search: query });
+    return response.results;
   },
 };

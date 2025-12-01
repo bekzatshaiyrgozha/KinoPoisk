@@ -24,9 +24,13 @@ export function useMovies(initialFilters?: MovieFilters): UseMoviesResult {
 
     try {
       const response = await movieService.getMovies(initialFilters);
-      setMovies(response.results);
-      setTotalCount(response.count);
-      setHasMore(!!response.next);
+      const results = Array.isArray(response.results) ? response.results : [];
+
+      setMovies(results);
+      setTotalCount(
+        typeof response.count === 'number' ? response.count : results.length
+      );
+      setHasMore(Boolean(response.next));
     } catch (err: any) {
       setError(err.message || 'Failed to fetch movies');
     } finally {
