@@ -15,7 +15,8 @@ from .models import Movie, Comment, Like, Rating
 from .serializers import (
     MovieSerializer, 
     CommentSerializer,
-    RatingSerializer
+    RatingSerializer,
+    MovieSearchSerializer
 )
 
 # Typing imports
@@ -653,3 +654,87 @@ class FavoriteViewSet(ViewSet):
         
         favorite.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+from django.db.models import Q
+from rest_framework.pagination import PageNumberPagination
+
+
+class MovieSearchPagination(PageNumberPagination):
+    """Custom pagination for movie search results"""
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
+class MovieSearchView(APIView):
+    """
+    View for searching movies with various filters.
+    
+    Query parameters:
+        - query: Search in title and description (case-insensitive)
+        - genre: Filter by exact genre match
+        - year_from: Minimum release year
+        - year_to: Maximum release year
+        - ordering: Sort order (default: -created_at)
+        - page: Page number for pagination
+        - page_size: Number of results per page (default: 10, max: 50)
+    
+    Example:
+        GET /api/movies/search/?query=matrix&genre=Sci-Fi&year_from=1990
+    """
+    
+    permission_classes = [AllowAny]
+    pagination_class = MovieSearchPagination
+    
+    def get(self, request: HttpRequest, *args, **kwargs):
+        """
+        Search movies based on query parameters.
+        
+        Returns:
+            - Paginated list of movies matching search criteria
+        """
+        search_serializer = MovieSearchSerializer(data=request.query_params)
+        if not search_serializer.is_valid():
+            return Response(
+                search_serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        validated_data = search_serializer.validated_data
+        query = validated_data.get('query', '').strip()
+        genre = validated_data.get('genre', '').strip()
+        year_from = validated_data.get('year_from')
+        year_to = validated_data.get('year_to')
+        ordering = validated_data.get('ordering', '-created_at')
+        
+        movies = Movie.objects.all()
+        
+        if query:
+            movies = movies.filter(
+                Q(title__icontains=query) | Q(description__icontains=query)
+            )
+        
+        if genre:
+            movies = movies.filter(genre__iexact=genre)
+        
+        if year_from:
+            movies = movies.filter(year__gte=year_from)
+        
+        if year_to:
+            movies = movies.filter(year__lte=year_to)
+        
+        if ordering in ['average_rating', '-average_rating']:
+            from django.db.models import Avg
+            movies = movies.annotate(
+                avg_rating=Avg('ratings__score')
+            )
+            ordering = ordering.replace('average_rating', 'avg_rating')
+        
+        movies = movies.order_by(ordering)
+        
+        paginator = self.pagination_class()
+        paginated_movies = paginator.paginate_queryset(movies, request)
+        
+        serializer = MovieSerializer(paginated_movies, many=True)
+        
+        return paginator.get_paginated_response(serializer.data)
