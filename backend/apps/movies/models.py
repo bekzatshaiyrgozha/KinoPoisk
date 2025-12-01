@@ -1,7 +1,7 @@
 # Django modules
 from django.db import models
 from django.db.models import Avg
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -65,6 +65,30 @@ class Movie(AbstractBaseModel):
     class Meta:
         ordering = ['-created_at']
 
+    @property
+    def average_rating(self):
+        """Average rating value for this movie."""
+        if hasattr(self, '_average_rating_cache'):
+            return self._average_rating_cache or 0
+        return self.ratings.aggregate(avg=Avg('score')).get('avg') or 0
+
+    @average_rating.setter
+    def average_rating(self, value):
+        # Allow annotate(...) to set this value without error
+        self._average_rating_cache = value
+
+    @property
+    def likes_count(self):
+        """Total likes for this movie."""
+        if hasattr(self, '_likes_count_cache'):
+            return self._likes_count_cache or 0
+        return self.likes.count()
+
+    @likes_count.setter
+    def likes_count(self, value):
+        # Allow annotate(...) to set this value without error
+        self._likes_count_cache = value
+
 
 class Comment(AbstractBaseModel):
     """
@@ -83,7 +107,7 @@ class Comment(AbstractBaseModel):
         related_name='comments'
     )
     user = models.ForeignKey(
-        User, 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE
     )
     text = models.TextField()
@@ -102,6 +126,18 @@ class Comment(AbstractBaseModel):
     class Meta:
         ordering = ['-created_at']
 
+    @property
+    def likes_count(self):
+        """Total likes for this comment."""
+        if hasattr(self, '_likes_count_cache'):
+            return self._likes_count_cache or 0
+        return self.likes.count()
+
+    @likes_count.setter
+    def likes_count(self, value):
+        # Allow annotate(...) to set this value without error
+        self._likes_count_cache = value
+
 
 class Rating(AbstractBaseModel):
     """
@@ -113,7 +149,7 @@ class Rating(AbstractBaseModel):
         - score: Rating score (1-5)
     """
     user = models.ForeignKey(
-        User, 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
         related_name='ratings'
     )
@@ -148,7 +184,7 @@ class Like(AbstractBaseModel):
         - content_object: GenericForeignKey to the liked object
     """
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='likes'
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='likes'
     )
     content_type = models.ForeignKey(
         ContentType, 
@@ -177,7 +213,7 @@ class Review(AbstractBaseModel):
         - rating: Rating score (1-5) associated with this review
     """
     user = models.ForeignKey(
-        User, 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
         related_name='reviews'
     )
@@ -218,7 +254,7 @@ class Favorite(AbstractBaseModel):
         - movie: ForeignKey to the Movie model
     """
     user = models.ForeignKey(
-        User, 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
         related_name='favorites'
     )

@@ -28,7 +28,9 @@ from apps.abstracts.serializers import (
 # Typing imports
 from typing import Optional, Type
 from django.db.models.query import QuerySet
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.contrib.contenttypes.models import ContentType as ContentTypeModel
 from django.db.models.base import ModelBase
 
