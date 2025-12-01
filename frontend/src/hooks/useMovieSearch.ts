@@ -9,7 +9,7 @@ interface UseMovieSearchReturn {
   totalCount: number;
   nextPage: string | null;
   previousPage: string | null;
-  searchMovies: (params: MovieSearchParams) => Promise<void>;
+  searchMovies: (params: MovieSearchParams, append?: boolean) => Promise<void>;
   clearResults: () => void;
 }
 
@@ -21,21 +21,28 @@ export const useMovieSearch = (): UseMovieSearchReturn => {
   const [nextPage, setNextPage] = useState<string | null>(null);
   const [previousPage, setPreviousPage] = useState<string | null>(null);
 
-  const searchMovies = useCallback(async (params: MovieSearchParams) => {
+  const searchMovies = useCallback(async (params: MovieSearchParams, append = false) => {
     setLoading(true);
     setError(null);
     
     try {
       const response: PaginatedResponse<Movie> = await movieService.searchMovies(params);
       
-      setMovies(response.results);
+      if (append) {
+        setMovies((prev) => [...prev, ...response.results]);
+      } else {
+        setMovies(response.results);
+      }
+      
       setTotalCount(response.count);
       setNextPage(response.next);
       setPreviousPage(response.previous);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Ошибка при поиске фильмов';
       setError(errorMessage);
-      setMovies([]);
+      if (!append) {
+        setMovies([]);
+      }
     } finally {
       setLoading(false);
     }
