@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await authService.register(data);
       // Auto-login after registration
-      await login({ username: data.username, password: data.password });
+      await login({ email: data.email, password: data.password });
     } finally {
       setIsLoading(false);
     }
