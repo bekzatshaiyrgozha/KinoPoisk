@@ -1,6 +1,6 @@
 # Third-party modules
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -31,7 +31,7 @@ class MovieListView(APIView):
     View to list all movies.
     Only authenticated users can access.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(
             self, request: HttpRequest,
@@ -293,3 +293,363 @@ class RatingView(APIView):
             serializer.data, 
             status=status.HTTP_200_OK
         )
+    
+
+from rest_framework.viewsets import ViewSet
+from rest_framework.decorators import action
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
+from .models import Review, Favorite
+from .serializers import (
+    ReviewSerializer,
+    RatingDetailSerializer,
+    FavoriteSerializer
+)
+
+
+class ReviewViewSet(ViewSet):
+    """
+    ViewSet for handling Review-related endpoints.
+    Supports full CRUD operations.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="List all reviews",
+        responses={200: ReviewSerializer(many=True)}
+    )
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="list",
+        url_name="review-list"
+    )
+    def list_reviews(
+        self, 
+        request: HttpRequest, 
+        *args, **kwargs
+    ) -> Response:
+        """Get all reviews (optionally filter by movie_id)"""
+        movie_id = request.query_params.get('movie_id')
+        
+        if movie_id:
+            reviews = Review.objects.filter(movie_id=movie_id)
+        else:
+            reviews = Review.objects.all()
+        
+        serializer = ReviewSerializer(reviews, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Create a new review",
+        request=ReviewSerializer,
+        responses={201: ReviewSerializer}
+    )
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="create",
+        url_name="review-create"
+    )
+    def create_review(
+        self, 
+        request: HttpRequest, 
+        *args, **kwargs
+    ) -> Response:
+        """Create a new review for a movie"""
+        serializer = ReviewSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(
+                serializer.data, 
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            serializer.errors, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    @extend_schema(
+        summary="Get review details",
+        responses={200: ReviewSerializer}
+    )
+    @action(
+        methods=["GET"],
+        detail=True,
+        url_path="detail",
+        url_name="review-detail"
+    )
+    def retrieve_review(
+        self, 
+        request: HttpRequest,
+        pk: int = None,
+        *args, **kwargs
+    ) -> Response:
+        """Get a specific review by ID"""
+        try:
+            review = Review.objects.get(id=pk)
+        except Review.DoesNotExist:
+            return Response(
+                {'detail': 'Review not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = ReviewSerializer(review)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Update a review",
+        request=ReviewSerializer,
+        responses={200: ReviewSerializer}
+    )
+    @action(
+        methods=["PUT", "PATCH"],
+        detail=True,
+        url_path="update",
+        url_name="review-update"
+    )
+    def update_review(
+        self, 
+        request: HttpRequest,
+        pk: int = None,
+        *args, **kwargs
+    ) -> Response:
+        """Update an existing review (only by the owner)"""
+        try:
+            review = Review.objects.get(id=pk, user=request.user)
+        except Review.DoesNotExist:
+            return Response(
+                {'detail': 'Review not found or you do not have permission.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        partial = request.method == 'PATCH'
+        serializer = ReviewSerializer(
+            review, 
+            data=request.data, 
+            partial=partial
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(
+            serializer.errors, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    @extend_schema(
+        summary="Delete a review",
+        responses={204: None}
+    )
+    @action(
+        methods=["DELETE"],
+        detail=True,
+        url_path="delete",
+        url_name="review-delete"
+    )
+    def delete_review(
+        self, 
+        request: HttpRequest,
+        pk: int = None,
+        *args, **kwargs
+    ) -> Response:
+        """Delete a review (only by the owner)"""
+        try:
+            review = Review.objects.get(id=pk, user=request.user)
+        except Review.DoesNotExist:
+            return Response(
+                {'detail': 'Review not found or you do not have permission.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        review.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RatingViewSet(ViewSet):
+    """
+    ViewSet for handling Rating-related endpoints.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="List all ratings",
+        responses={200: RatingDetailSerializer(many=True)}
+    )
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="list",
+        url_name="rating-list"
+    )
+    def list_ratings(
+        self, 
+        request: HttpRequest, 
+        *args, **kwargs
+    ) -> Response:
+        """Get all ratings (optionally filter by movie_id)"""
+        movie_id = request.query_params.get('movie_id')
+        
+        if movie_id:
+            ratings = Rating.objects.filter(movie_id=movie_id)
+        else:
+            ratings = Rating.objects.all()
+        
+        serializer = RatingDetailSerializer(ratings, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Create or update a rating",
+        request=RatingDetailSerializer,
+        responses={200: RatingDetailSerializer}
+    )
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="rate",
+        url_name="rating-create"
+    )
+    def create_or_update_rating(
+        self, 
+        request: HttpRequest, 
+        *args, **kwargs
+    ) -> Response:
+        """Rate a movie (creates or updates existing rating)"""
+        serializer = RatingDetailSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(
+            serializer.errors, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    @extend_schema(
+        summary="Delete a rating",
+        responses={204: None}
+    )
+    @action(
+        methods=["DELETE"],
+        detail=True,
+        url_path="delete",
+        url_name="rating-delete"
+    )
+    def delete_rating(
+        self, 
+        request: HttpRequest,
+        pk: int = None,
+        *args, **kwargs
+    ) -> Response:
+        """Delete a rating (only by the owner)"""
+        try:
+            rating = Rating.objects.get(id=pk, user=request.user)
+        except Rating.DoesNotExist:
+            return Response(
+                {'detail': 'Rating not found or you do not have permission.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        rating.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FavoriteViewSet(ViewSet):
+    """
+    ViewSet for handling Favorite-related endpoints.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="List user's favorite movies",
+        responses={200: FavoriteSerializer(many=True)}
+    )
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="list",
+        url_name="favorite-list"
+    )
+    def list_favorites(
+        self, 
+        request: HttpRequest, 
+        *args, **kwargs
+    ) -> Response:
+        """Get all favorite movies for the current user"""
+        favorites = Favorite.objects.filter(user=request.user)
+        serializer = FavoriteSerializer(favorites, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Add movie to favorites",
+        request=FavoriteSerializer,
+        responses={201: FavoriteSerializer}
+    )
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="add",
+        url_name="favorite-add"
+    )
+    def add_favorite(
+        self, 
+        request: HttpRequest, 
+        *args, **kwargs
+    ) -> Response:
+        """Add a movie to favorites"""
+        serializer = FavoriteSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            # Check if already favorited
+            movie_id = serializer.validated_data.get('movie_id')
+            if Favorite.objects.filter(
+                user=request.user, 
+                movie_id=movie_id
+            ).exists():
+                return Response(
+                    {'detail': 'Movie already in favorites.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            serializer.save(user=request.user)
+            return Response(
+                serializer.data, 
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            serializer.errors, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    @extend_schema(
+        summary="Remove movie from favorites",
+        responses={204: None}
+    )
+    @action(
+        methods=["DELETE"],
+        detail=True,
+        url_path="remove",
+        url_name="favorite-remove"
+    )
+    def remove_favorite(
+        self, 
+        request: HttpRequest,
+        pk: int = None,
+        *args, **kwargs
+    ) -> Response:
+        """Remove a movie from favorites"""
+        try:
+            favorite = Favorite.objects.get(id=pk, user=request.user)
+        except Favorite.DoesNotExist:
+            return Response(
+                {'detail': 'Favorite not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        favorite.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
