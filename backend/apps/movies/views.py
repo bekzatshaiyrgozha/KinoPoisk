@@ -680,9 +680,6 @@ class MovieSearchView(APIView):
         - ordering: Sort order (default: -created_at)
         - page: Page number for pagination
         - page_size: Number of results per page (default: 10, max: 50)
-    
-    Example:
-        GET /api/movies/search/?query=matrix&genre=Sci-Fi&year_from=1990
     """
     
     permission_classes = [AllowAny]
@@ -708,9 +705,10 @@ class MovieSearchView(APIView):
         year_from = validated_data.get('year_from')
         year_to = validated_data.get('year_to')
         ordering = validated_data.get('ordering', '-created_at')
-        
-        movies = Movie.objects.all()
-        
+        movies = Movie.objects.annotate(
+            avg_rating=Avg('ratings__score')
+        )
+
         if query:
             movies = movies.filter(
                 Q(title__icontains=query) | Q(description__icontains=query)
@@ -724,12 +722,7 @@ class MovieSearchView(APIView):
         
         if year_to:
             movies = movies.filter(year__lte=year_to)
-        
         if ordering in ['average_rating', '-average_rating']:
-            from django.db.models import Avg
-            movies = movies.annotate(
-                avg_rating=Avg('ratings__score')
-            )
             ordering = ordering.replace('average_rating', 'avg_rating')
         
         movies = movies.order_by(ordering)
