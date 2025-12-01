@@ -16,9 +16,8 @@ export const authService = {
       credentials
     );
 
-    // Save tokens
-    storage.set(TOKEN_KEYS.ACCESS, response.data.access);
-    storage.set(TOKEN_KEYS.REFRESH, response.data.refresh);
+    storage.set(TOKEN_KEYS.ACCESS, response.data.access, 60 * 60 * 1000);
+    storage.set(TOKEN_KEYS.REFRESH, response.data.refresh, 7 * 24 * 60 * 60 * 1000); 
 
     return response.data;
   },

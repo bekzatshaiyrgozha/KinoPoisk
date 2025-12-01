@@ -1,42 +1,37 @@
-const STORAGE_PREFIX = 'kinopoisk_';
+import { cookieManager } from './cookie.utils';
+import { COOKIE_EXPIRATION } from '../config/cookies.config';
+
+const PREFIX = 'kinopoisk_';
 
 export const storage = {
   get<T>(key: string): T | null {
     try {
-      const item = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
+      const item = cookieManager.get(`${PREFIX}${key}`);
       return item ? JSON.parse(item) : null;
-    } catch (error) {
-      console.error(`Error reading from localStorage: ${error}`);
+    } catch {
       return null;
     }
   },
 
-  set<T>(key: string, value: T): void {
+  set<T>(key: string, value: T, maxAge = COOKIE_EXPIRATION.WEEK): void {
     try {
-      localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(value));
-    } catch (error) {
-      console.error(`Error writing to localStorage: ${error}`);
-    }
+      cookieManager.set(`${PREFIX}${key}`, JSON.stringify(value), {
+        maxAge,
+        path: '/',
+        sameSite: 'Lax',
+        secure: true,
+      });
+    } catch {}
   },
 
   remove(key: string): void {
-    try {
-      localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
-    } catch (error) {
-      console.error(`Error removing from localStorage: ${error}`);
-    }
+    cookieManager.remove(`${PREFIX}${key}`);
   },
 
   clear(): void {
-    try {
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith(STORAGE_PREFIX)) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch (error) {
-      console.error(`Error clearing localStorage: ${error}`);
-    }
+    Object.keys(cookieManager.getAll()).forEach((key) => {
+      if (key.startsWith(PREFIX)) cookieManager.remove(key);
+    });
   },
 };
 
