@@ -216,3 +216,53 @@ class FavoriteSerializer(serializers.ModelSerializer):
         validated_data['movie'] = movie
         return super().create(validated_data)
     
+
+class MovieSearchSerializer(serializers.Serializer):
+    """
+    Serializer for movie search parameters.
+    All fields are optional to allow flexible search.
+    """
+    
+    query = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Search query for title and description"
+    )
+    genre = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Filter by genre (exact match)"
+    )
+    year_from = serializers.IntegerField(
+        required=False,
+        min_value=1900,
+        help_text="Minimum release year"
+    )
+    year_to = serializers.IntegerField(
+        required=False,
+        max_value=2100,
+        help_text="Maximum release year"
+    )
+    ordering = serializers.ChoiceField(
+        choices=[
+            'title', '-title',        
+            'year', '-year',           
+            'average_rating', '-average_rating',  
+            'created_at', '-created_at'  
+        ],
+        required=False,
+        default='-created_at',
+        help_text="Sort order for results"
+    )
+    
+    def validate(self, attrs):
+        """Validate that year_from is not greater than year_to"""
+        year_from = attrs.get('year_from')
+        year_to = attrs.get('year_to')
+        
+        if year_from and year_to and year_from > year_to:
+            raise serializers.ValidationError({
+                'year_from': 'year_from cannot be greater than year_to'
+            })
+        
+        return attrs

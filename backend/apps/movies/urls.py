@@ -8,7 +8,8 @@ from .views import (
     RatingView,
     ReviewViewSet,
     RatingViewSet,
-    FavoriteViewSet
+    FavoriteViewSet,
+    MovieSearchView 
 )
 
 app_name = 'movies'
@@ -17,6 +18,7 @@ router = DefaultRouter()
 
 urlpatterns = [
     path('', MovieListView.as_view(), name='movie-list'),
+    path('search/', MovieSearchView.as_view(), name='movie-search'),
     path('<int:movie_id>/', MovieDetailView.as_view(), name='movie-detail'),
     path('<int:movie_id>/comments/', CommentView.as_view(), name='movie-comments'),
     path('<int:movie_id>/rate/', RatingView.as_view(), name='movie-rate'),
