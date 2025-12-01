@@ -3,7 +3,7 @@ from django.db import models
 from django.db.models import Avg
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 
 # Project modules
@@ -54,21 +54,10 @@ class Movie(AbstractBaseModel):
         null=True, 
         help_text="Movie poster file path"
     )
-
-    @property
-    def average_rating(self):
-        return self.ratings.aggregate(
-            avg=Avg('score')
-        )['avg'] or 0.0
-
-    @property
-    def likes_count(self):
-        from django.contrib.contenttypes.models import ContentType
-        ct = ContentType.objects.get_for_model(Movie)
-        return Like.objects.filter(
-            content_type=ct, 
-            object_id=self.id
-        ).count()
+    likes = GenericRelation(
+        'Like', 
+        related_query_name='movie'
+    )
 
     def __str__(self):
         return f"{self.title} ({self.year})"
@@ -105,15 +94,7 @@ class Comment(AbstractBaseModel):
         blank=True, 
         related_name='replies'
     )
-
-    @property
-    def likes_count(self):
-        from django.contrib.contenttypes.models import ContentType
-        ct = ContentType.objects.get_for_model(Comment)
-        return Like.objects.filter(
-            content_type=ct, 
-            object_id=self.id
-        ).count()
+    likes = GenericRelation('Like', related_query_name='comment')
 
     def __str__(self):
         return f'Comment by {self.user.username} on {self.movie.title}'

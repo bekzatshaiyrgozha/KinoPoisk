@@ -6,7 +6,7 @@ from settings.conf import POSTGRESQL_URL
 import dj_database_url
 
 
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = ["localhost:8000", "localhost", "localhost:5173"]
 
 DATABASES = {
