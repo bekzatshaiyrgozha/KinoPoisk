@@ -30,3 +30,8 @@ dependencies = [
     "psycopg2-binary", 
     "dj-database-url"
 ]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "settings.env.local"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "-v --tb=short"

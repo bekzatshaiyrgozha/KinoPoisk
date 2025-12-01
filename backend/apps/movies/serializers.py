@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import Movie, Comment, Like, Rating
+from .models import Movie, Comment, Like, Rating,  Review, Favorite
 from django.contrib.contenttypes.models import ContentType
+
 
 
 class MovieSerializer(serializers.ModelSerializer):
@@ -104,3 +105,114 @@ class RatingSerializer(serializers.ModelSerializer):
             'movie', 'average_rating', 
             'created_at', 'updated_at'
         ]
+
+class ReviewSerializer(serializers.ModelSerializer):
+    """Serializer for Review model"""
+
+    user = serializers.StringRelatedField(read_only=True)
+    movie = serializers.StringRelatedField(read_only=True)
+    movie_id = serializers.IntegerField(write_only=True, required=False)
+
+    class Meta:
+        model = Review
+        fields = [
+            'id', 'user', 'movie', 'movie_id',
+            'title', 'text', 'rating',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'user', 'movie',
+            'created_at', 'updated_at'
+        ]
+
+    def validate_movie_id(self, value):
+        """Validate that the movie exists"""
+        if not Movie.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Movie not found.")
+        return value
+
+    def create(self, validated_data):
+        movie_id = validated_data.pop('movie_id')
+        movie = Movie.objects.get(id=movie_id)
+        validated_data['movie'] = movie
+
+        user = self.context['request'].user
+        if Review.objects.filter(user=user, movie=movie).exists():
+            raise serializers.ValidationError({
+                'detail': 'You have already reviewed this movie.'
+            })
+
+        return super().create(validated_data)
+
+
+
+class RatingDetailSerializer(serializers.ModelSerializer):
+    """Detailed serializer for Rating model (for ViewSet)"""
+
+    user = serializers.StringRelatedField(read_only=True)
+    movie = serializers.StringRelatedField(read_only=True)
+    movie_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = Rating
+        fields = [
+            'id', 'user', 'movie', 'movie_id',
+            'score',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'user', 'movie',
+            'created_at', 'updated_at'
+        ]
+
+    def validate_movie_id(self, value):
+        """Validate that the movie exists"""
+        if not Movie.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Movie not found.")
+        return value
+
+    def create(self, validated_data):
+        """Create or update a rating"""
+        movie_id = validated_data.pop('movie_id')
+        movie = Movie.objects.get(id=movie_id)
+        user = self.context['request'].user
+        
+        rating, created = Rating.objects.update_or_create(
+            user=user,
+            movie=movie,
+            defaults={'score': validated_data['score']}
+        )
+        return rating
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    """Serializer for Favorite model"""
+
+    user = serializers.StringRelatedField(read_only=True)
+    movie = serializers.StringRelatedField(read_only=True)
+    movie_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = Favorite
+        fields = [
+            'id', 'user', 'movie', 'movie_id',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'user', 'movie',
+            'created_at', 'updated_at'
+        ]
+
+    def validate_movie_id(self, value):
+        """Validate that the movie exists"""
+        if not Movie.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Movie not found.")
+        return value
+
+    def create(self, validated_data):
+        """Add movie to favorites"""
+        movie_id = validated_data.pop('movie_id')
+        movie = Movie.objects.get(id=movie_id)
+        validated_data['movie'] = movie
+        return super().create(validated_data)
+    

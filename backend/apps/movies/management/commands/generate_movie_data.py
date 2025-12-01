@@ -13,7 +13,7 @@ from django.db import transaction
 from faker import Faker
 
 # Project modules
-from apps.movies.models import Movie, Comment, Rating, Like
+from apps.movies.models import Movie, Comment, Rating, Like, Review, Favorite
 from django.contrib.contenttypes.models import ContentType
 
 
@@ -43,6 +43,8 @@ class Command(BaseCommand):
         comments = self._generate_comments(users, movies)
         self._generate_ratings(users, movies)
         self._generate_likes(users, movies, comments)
+        self._generate_reviews(users, movies)
+        self._generate_favorites(users, movies)
 
         elapsed = (datetime.now() - start).total_seconds()
         self.stdout.write(
@@ -50,6 +52,8 @@ class Command(BaseCommand):
         )
 
     def _clear_old_data(self):
+        Review.objects.all().delete()   
+        Favorite.objects.all().delete() 
         Like.objects.all().delete()
         Comment.objects.all().delete()
         Rating.objects.all().delete()
@@ -141,3 +145,35 @@ class Command(BaseCommand):
 
         Like.objects.bulk_create(like_objects)
         self.stdout.write(self.style.SUCCESS(f"→ {len(like_objects)} likes created."))
+
+
+        def _generate_reviews(self, users, movies):
+            self.stdout.write("Creating reviews...")
+            reviews = []
+            for _ in range(50):
+                user = choice(users)
+                movie = choice(movies)
+                if not Review.objects.filter(user=user, movie=movie).exists():
+                    reviews.append(
+                        Review(
+                            user=user,
+                            movie=movie,
+                            title=fake.sentence(nb_words=5),
+                            text=fake.paragraph(nb_sentences=3),
+                            rating=randint(1, 5)
+                        )
+                    )
+            Review.objects.bulk_create(reviews)
+            self.stdout.write(self.style.SUCCESS(f"→ {len(reviews)} reviews created."))
+
+        def _generate_favorites(self, users, movies):
+            self.stdout.write("Creating favorites...")
+            favorites = []
+            for _ in range(30):
+                user = choice(users)
+                movie = choice(movies)
+                if not Favorite.objects.filter(user=user, movie=movie).exists():
+                    favorites.append(Favorite(user=user, movie=movie))
+            Favorite.objects.bulk_create(favorites)
+            self.stdout.write(self.style.SUCCESS(f"→ {len(favorites)} favorites created."))
+
