@@ -12,5 +12,6 @@ export const API_ENDPOINTS = {
     RATE: (id: number | string) => `/movies/${id}/rate/`,
   },
 
-  LIKE: '/like/',
+  LIKE: '/movies/like/',
 } as const;
+

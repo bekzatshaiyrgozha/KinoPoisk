@@ -12,6 +12,7 @@ export interface Comment {
   text: string;
   parent: number | null;
   likes_count: number;
+  is_liked: boolean;
   created_at: string;
   updated_at?: string;
   replies?: Comment[];

@@ -9,19 +9,45 @@ class MovieSerializer(serializers.ModelSerializer):
 
     average_rating = serializers.FloatField(read_only=True)
     likes_count = serializers.IntegerField(read_only=True)
+    is_liked = serializers.SerializerMethodField()
+    user_rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
         fields = [
             'id', 'title', 'description', 'year', 'genre',
             'duration', 'poster', 'average_rating', 'likes_count',
+            'is_liked', 'user_rating',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'average_rating', 
-            'likes_count', 
+            'likes_count', 'is_liked', 'user_rating',
             'created_at', 'updated_at'
         ]
+
+    def get_is_liked(self, obj):
+        user = self.context.get('request').user if self.context.get('request') else None
+        if user and user.is_authenticated:
+            content_type = ContentType.objects.get_for_model(Movie)
+            # ActiveManager automatically filters deleted_at__isnull=True
+            return Like.objects.filter(
+                content_type=content_type,
+                object_id=obj.id,
+                user=user
+            ).exists()
+        return False
+    
+    def get_user_rating(self, obj):
+        """Get the current user's rating for this movie"""
+        user = self.context.get('request').user if self.context.get('request') else None
+        if user and user.is_authenticated:
+            rating = Rating.objects.filter(
+                movie=obj,
+                user=user
+            ).first()
+            return rating.score if rating else None
+        return None
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -30,24 +56,44 @@ class CommentSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
     movie = serializers.StringRelatedField(read_only=True)
     likes_count = serializers.IntegerField(read_only=True)
+    is_liked = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = [
             'id', 'movie', 'user', 'text', 'parent',
-            'likes_count', 'replies',
+            'likes_count', 'is_liked', 'replies',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'likes_count', 'replies',
+            'id', 'likes_count', 'is_liked', 'replies',
             'created_at', 'updated_at'
         ]
 
+    def get_is_liked(self, obj):
+        user = self.context.get('request').user if self.context.get('request') else None
+        if user and user.is_authenticated:
+            content_type = ContentType.objects.get_for_model(Comment)
+            # ActiveManager automatically filters deleted_at__isnull=True
+            return Like.objects.filter(
+                content_type=content_type,
+                object_id=obj.id,
+                user=user
+            ).exists()
+        return False
+
     def get_replies(self, obj):
         """Return nested replies for a comment"""
-        from rest_framework import serializers
-        replies = obj.replies.all()
+        from django.db.models import Count
+        # ActiveManager automatically filters deleted_at__isnull=True
+        replies = obj.replies.annotate(
+            likes_count=Count('likes', distinct=True)
+        )
+        
+        user = self.context.get('request').user if self.context.get('request') else None
+        content_type = ContentType.objects.get_for_model(Comment)
+        
         # Create a simple serializer for replies to avoid circular reference
         return [
             {
@@ -56,6 +102,11 @@ class CommentSerializer(serializers.ModelSerializer):
                 'text': reply.text,
                 'parent': reply.parent_id,
                 'likes_count': reply.likes_count,
+                'is_liked': Like.objects.filter(
+                    content_type=content_type,
+                    object_id=reply.id,
+                    user=user
+                ).exists() if user and user.is_authenticated else False,
                 'created_at': reply.created_at,
                 'updated_at': reply.updated_at
             }

@@ -1,13 +1,15 @@
 import { useParams } from 'react-router-dom';
-import { FaClock, FaCalendar, FaHeart } from 'react-icons/fa';
+import { FaClock, FaCalendar } from 'react-icons/fa';
 import { Loader, Card, Badge } from '@/components/ui';
-import { RatingStars } from '@/components/features/movies';
+import { LikeButton } from '@/components/LikeButton';
+import { MovieRating } from '@/components/MovieRating';
+import { CommentList } from '@/components/CommentList';
 import { useMovie } from '@/hooks';
-import { formatDuration, formatLikesCount } from '@/utils';
+import { formatDuration } from '@/utils';
 
 export const MovieDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { movie, loading, error } = useMovie(Number(id));
+  const { movie, loading, error, refetch } = useMovie(Number(id));
 
   if (loading) {
     return (
@@ -21,7 +23,7 @@ export const MovieDetailPage = () => {
     return (
       <div className="container mx-auto px-4">
         <div className="text-center py-12">
-          <p className="text-red-600 text-lg">{error || 'Фильм не найден'}</p>
+          <p className="text-red-600 text-lg">{error || 'Movie not found'}</p>
         </div>
       </div>
     );
@@ -70,25 +72,40 @@ export const MovieDetailPage = () => {
               </Badge>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <RatingStars rating={movie.average_rating} readonly size="lg" />
-                <div className="flex items-center gap-2 text-gray-600">
-                  <FaHeart className="text-red-500" />
-                  <span className="font-medium">{formatLikesCount(movie.likes_count)}</span>
-                </div>
-              </div>
+            {/* Rating Section */}
+            <div className="p-6 bg-gray-50 rounded-lg">
+              <MovieRating
+                movieId={movie.id}
+                averageRating={movie.average_rating}
+                userRating={movie.user_rating}
+                onRatingChange={refetch}
+              />
+            </div>
+
+            {/* Like Button */}
+            <div className="flex justify-end">
+              <LikeButton
+                contentType="movie"
+                objectId={movie.id}
+                initialLikesCount={movie.likes_count}
+                initialIsLiked={movie.is_liked}
+              />
             </div>
 
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                Описание
+                Description
               </h2>
               <p className="text-gray-700 leading-relaxed">{movie.description}</p>
             </div>
           </div>
         </div>
       </Card>
+
+      {/* Comments Section */}
+      <div className="mt-8">
+        <CommentList movieId={movie.id} />
+      </div>
     </div>
   );
 };

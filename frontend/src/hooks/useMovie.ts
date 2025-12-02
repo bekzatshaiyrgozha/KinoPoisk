@@ -22,6 +22,11 @@ export function useMovie(id: number): UseMovieResult {
 
     try {
       const data = await movieService.getMovie(id);
+      console.log('=== MOVIE DATA FROM SERVER ===');
+      console.log('Movie ID:', data.id);
+      console.log('User Rating:', data.user_rating);
+      console.log('Full movie data:', data);
+      console.log('=== END MOVIE DATA ===');
       setMovie(data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch movie');

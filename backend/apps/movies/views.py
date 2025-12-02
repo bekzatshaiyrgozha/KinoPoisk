@@ -126,9 +126,11 @@ class CommentView(APIView):
         """
         comments: QuerySet[Comment] = Comment.objects.filter(
             movie_id=movie_id, parent=None
+        ).annotate(
+            likes_count=Count('likes', distinct=True)
         )
         serializer: CommentSerializer = CommentSerializer(
-            comments, many=True
+            comments, many=True, context={'request': request}
         )
         return Response(
             serializer.data, 
@@ -224,26 +226,86 @@ class LikeView(APIView):
             )
 
         user: User = request.user
+        
+        # Debug logging
+        print(f"\n=== LIKE DEBUG ===")
+        print(f"User: {user.username}")
+        print(f"Content Type: {content_type_str}")
+        print(f"Object ID: {object_id}")
+        
+        # Check for active like
         existing_like: Optional[Like] = Like.objects.filter(
             user=user, 
             content_type=ct, 
             object_id=object_id
         ).first()
+        
+        print(f"Active like found: {existing_like is not None}")
+        if existing_like:
+            print(f"Active like ID: {existing_like.id}, deleted_at: {existing_like.deleted_at}")
 
         if existing_like:
+            # Unlike: soft delete the like
+            print("Soft deleting existing like...")
             existing_like.delete()
+            
+            # Check if it was soft deleted
+            check_deleted = Like.all_objects.filter(id=existing_like.id).first()
+            if check_deleted:
+                print(f"After delete - deleted_at: {check_deleted.deleted_at}")
+            
+            likes_count = Like.objects.filter(
+                content_type=ct,
+                object_id=object_id
+            ).count()
+            print(f"Likes count after delete: {likes_count}")
+            print("=== END DEBUG ===\n")
+            
             return Response(
-                {"detail": f"{content_type_str.capitalize()} unliked."},
+                {
+                    "liked": False,
+                    "likes_count": likes_count
+                },
                 status=status.HTTP_200_OK
             )
 
-        Like.objects.create(
-            user=user, 
-            content_type=ct, 
+        # Check if there's a soft-deleted like that we can restore
+        soft_deleted_like: Optional[Like] = Like.all_objects.filter(
+            user=user,
+            content_type=ct,
+            object_id=object_id,
+            deleted_at__isnull=False
+        ).first()
+        
+        if soft_deleted_like:
+            # Restore the soft-deleted like
+            print(f"Restoring soft-deleted like ID: {soft_deleted_like.id}")
+            soft_deleted_like.deleted_at = None
+            soft_deleted_like.save(update_fields=['deleted_at'])
+            new_like = soft_deleted_like
+            print(f"Restored like ID: {new_like.id}")
+        else:
+            # Create a new like
+            print("Creating new like...")
+            new_like = Like.objects.create(
+                user=user, 
+                content_type=ct, 
+                object_id=object_id
+            )
+            print(f"Created like ID: {new_like.id}")
+        
+        likes_count = Like.objects.filter(
+            content_type=ct,
             object_id=object_id
-        )
+        ).count()
+        print(f"Likes count after create/restore: {likes_count}")
+        print("=== END DEBUG ===\n")
+        
         return Response(
-            {"detail": f"{content_type_str.capitalize()} liked."},
+            {
+                "liked": True,
+                "likes_count": likes_count
+            },
             status=status.HTTP_201_CREATED
         )
 

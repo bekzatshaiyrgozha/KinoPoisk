@@ -10,6 +10,12 @@ from django.contrib.contenttypes.models import ContentType
 from apps.abstracts.models import AbstractBaseModel
 
 
+class ActiveManager(models.Manager):
+    """Manager that filters out soft-deleted records"""
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
+
 NAME_MAX_LENGTH = 255
 GENRE_MAX_LENGTH = 100
 MIN_YEAR = 1900
@@ -59,6 +65,9 @@ class Movie(AbstractBaseModel):
         related_query_name='movie'
     )
 
+    objects = ActiveManager()
+    all_objects = models.Manager()
+
     def __str__(self):
         return f"{self.title} ({self.year})"
 
@@ -95,6 +104,9 @@ class Comment(AbstractBaseModel):
         related_name='replies'
     )
     likes = GenericRelation('Like', related_query_name='comment')
+
+    objects = ActiveManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return f'Comment by {self.user.username} on {self.movie.title}'
@@ -156,6 +168,9 @@ class Like(AbstractBaseModel):
     )
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
+
+    objects = ActiveManager()
+    all_objects = models.Manager()
 
     class Meta:
         unique_together = ('user', 'content_type', 'object_id')
