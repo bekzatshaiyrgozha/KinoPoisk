@@ -160,7 +160,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     user = serializers.StringRelatedField(read_only=True)
     movie = serializers.StringRelatedField(read_only=True)
-    movie_id = serializers.IntegerField(write_only=True, required=False)
+    movie_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Review

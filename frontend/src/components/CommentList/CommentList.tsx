@@ -18,8 +18,8 @@ export const CommentList = ({ movieId }: CommentListProps) => {
     setError(null);
 
     try {
-      const data = await commentService.getComments(movieId);
-      setComments(data);
+      const response = await commentService.getComments(movieId);
+      setComments(response.results);
     } catch (err: any) {
       setError(err.message || 'Failed to load comments');
     } finally {

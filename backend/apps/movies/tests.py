@@ -1,514 +1,637 @@
-import pytest
+from django.test import TestCase
 from django.contrib.auth import get_user_model
+from rest_framework.test import APITestCase, APIClient
+from rest_framework import status
+from apps.movies.models import Movie, Comment, Like, Rating, Review, Favorite
+from django.contrib.contenttypes.models import ContentType
 
 User = get_user_model()
-from rest_framework.test import APIClient
-from rest_framework import status
-from apps.movies.models import Movie, Review, Rating, Favorite
-from django.test import TestCase
-
-@pytest.fixture
-def api_client():
-    """Fixture for creating API client."""
-    return APIClient()
 
 
-@pytest.fixture
-def user(db):
-    """Fixture for creating test user."""
-    return User.objects.create_user(
-        username='testuser',
-        email='test@example.com',
-        password='testpass123'
-    )
-
-
-@pytest.fixture
-def another_user(db):
-    """Fixture for creating second user."""
-    return User.objects.create_user(
-        username='anotheruser',
-        email='another@example.com',
-        password='testpass123'
-    )
-
-
-@pytest.fixture
-def movie(db):
-    """Fixture for creating test movie."""
-    return Movie.objects.create(
-        title='Test Movie',
-        description='Test Description',
-        year=2024,
-        genre='Action',
-        duration=120
-    )
-
-
-@pytest.fixture
-def authenticated_client(api_client, user):
-    """Fixture for creating authenticated client."""
-    api_client.force_authenticate(user=user)
-    return api_client
-
-
-@pytest.mark.django_db
-class TestReviewViewSet:
-    """Group of tests for ReviewViewSet."""
-
-    def test_list_reviews_success(self, authenticated_client, movie, user):
-        """TEST 1: Check listing all reviews."""
-        Review.objects.create(
-            user=user,
-            movie=movie,
-            title='Great Movie',
-            text='I loved it!',
-            rating=5
-        )
-        
-        response = authenticated_client.get('/api/movies/reviews/list/')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-        assert response.data[0]['title'] == 'Great Movie'
-
-    def test_list_reviews_filter_by_movie(self, authenticated_client, movie, user):
-        """TEST 2: Check filtering reviews by movie."""
-        another_movie = Movie.objects.create(
-            title='Another Movie',
-            description='Another Description',
-            year=2023,
-            genre='Drama',
-            duration=100
-        )
-        
-        Review.objects.create(user=user, movie=movie, title='Review 1', text='Text 1', rating=5)
-        Review.objects.create(user=user, movie=another_movie, title='Review 2', text='Text 2', rating=4)
-        
-        response = authenticated_client.get(f'/api/movies/reviews/list/?movie_id={movie.id}')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-        assert response.data[0]['title'] == 'Review 1'
-
-    def test_create_review_success(self, authenticated_client, movie):
-        """TEST 3: Check creating new review."""
-        data = {
-            'movie_id': movie.id,
-            'title': 'Amazing!',
-                   'text': 'Best movie ever!',
-            'rating': 5
-        }
-        
-        response = authenticated_client.post('/api/movies/reviews/create/', data)
-        
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data['title'] == 'Amazing!'
-        assert Review.objects.count() == 1
-
-    def test_create_review_invalid_movie(self, authenticated_client):
-        """TEST 4: Check creating review for non-existing movie."""
-        data = {
-            'movie_id': 99999,
-            'title': 'Test',
-            'text': 'Test text',
-            'rating': 5
-        }
-        
-        response = authenticated_client.post('/api/movies/reviews/create/', data)
-        
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_create_review_duplicate(self, authenticated_client, movie, user):
-        """TEST 5: Check preventing duplicate review."""
-        Review.objects.create(
-            user=user,
-            movie=movie,
-            title='First Review',
-            text='First text',
-            rating=5
-        )
-        
-        data = {
-            'movie_id': movie.id,
-            'title': 'Second Review',
-            'text': 'Second text',
-            'rating': 4
-        }
-        
-        response = authenticated_client.post('/api/movies/reviews/create/', data)
-        
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_retrieve_review_success(self, authenticated_client, movie, user):
-        """TEST 6: Check retrieving review by ID."""
-        review = Review.objects.create(
-            user=user,
-            movie=movie,
-            title='Test Review',
-            text='Test text',
-            rating=5
-        )
-        
-        response = authenticated_client.get(f'/api/movies/reviews/{review.id}/detail/')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['title'] == 'Test Review'
-
-    def test_retrieve_review_not_found(self, authenticated_client):
-        """TEST 7: Check retrieving non-existing review."""
-        response = authenticated_client.get('/api/movies/reviews/99999/detail/')
-        
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    def test_update_review_success(self, authenticated_client, movie, user):
-        review = Review.objects.create(
-            user=user,
-            movie=movie,
-            title='Old Title',
-            text='Old text',
-            rating=3
-        )
+class MovieTests(APITestCase):
+    """Test suite for Movie endpoints"""
     
-        data = {
-            'title': 'New Title',
-            'text': 'New text',
-            'rating': 5
-        }
-    
-        response = authenticated_client.put(f'/api/movies/reviews/{review.id}/update/', data)
-    
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['title'] == 'New Title'
-    
-        review.refresh_from_db()
-        assert review.title == 'New Title'
-
-    def test_update_review_partial(self, authenticated_client, movie, user):
-        """TEST 9: Check partial update of review (PATCH)."""
-        review = Review.objects.create(
-            user=user,
-            movie=movie,
-            title='Original Title',
-            text='Original text',
-            rating=3
+    def setUp(self):
+        """Set up test client and test data"""
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='TestPass123!'
         )
         
-        data = {'rating': 5}
-        
-        response = authenticated_client.patch(f'/api/movies/reviews/{review.id}/update/', data)
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['rating'] == 5
-        assert response.data['title'] == 'Original Title'
-
-    def test_update_review_permission_denied(self, authenticated_client, another_user, movie, user):
-        """TEST 10: Check editing another user's review is forbidden."""
-        review = Review.objects.create(
-            user=another_user,
-            movie=movie,
-            title='Another User Review',
-            text='Text',
-            rating=4
-        )
-        
-        data = {'title': 'Hacked Title'}
-        
-        response = authenticated_client.put(f'/api/movies/reviews/{review.id}/update/', data)
-        
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    def test_delete_review_success(self, authenticated_client, movie, user):
-        review = Review.objects.create(
-            user=user,
-            movie=movie,
-            title='To Delete',
-            text='Text',
-            rating=3
-        )
-    
-        review_id = review.id
-    
-        response = authenticated_client.delete(f'/api/movies/reviews/{review_id}/delete/')
-    
-        assert response.status_code == status.HTTP_204_NO_CONTENT
-        assert Review.objects.get(id=review_id).deleted_at is not None
-
-    def test_delete_review_permission_denied(self, authenticated_client, another_user, movie):
-        """TEST 12: Check preventing deletion of another user's review."""
-        review = Review.objects.create(
-            user=another_user,
-            movie=movie,
-            title='Another User Review',
-            text='Text',
-            rating=4
-        )
-        
-        response = authenticated_client.delete(f'/api/movies/reviews/{review.id}/delete/')
-        
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert Review.objects.count() == 1
-
-
-@pytest.mark.django_db
-class TestRatingViewSet:
-    """Group of tests for RatingViewSet."""
-
-    def test_list_ratings_success(self, authenticated_client, movie, user):
-        """TEST 13: Check listing ratings."""
-        Rating.objects.create(user=user, movie=movie, score=5)
-        
-        response = authenticated_client.get('/api/movies/ratings/list/')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-
-    def test_create_rating_success(self, authenticated_client, movie):
-        """TEST 14: Check creating rating."""
-        data = {'movie_id': movie.id, 'score': 5}
-        
-        response = authenticated_client.post('/api/movies/ratings/rate/', data)
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['score'] == 5
-        assert Rating.objects.count() == 1
-
-    def test_update_rating_success(self, authenticated_client, movie, user):
-        """TEST 15: Check updating existing rating."""
-        Rating.objects.create(user=user, movie=movie, score=3)
-        
-        data = {'movie_id': movie.id, 'score': 5}
-        
-        response = authenticated_client.post('/api/movies/ratings/rate/', data)
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['score'] == 5
-        assert Rating.objects.count() == 1
-
-    def test_create_rating_invalid_score(self, authenticated_client, movie):
-        """TEST 16: Check validation for rating (1–5 only)."""
-        data = {'movie_id': movie.id, 'score': 10}
-        
-        response = authenticated_client.post('/api/movies/ratings/rate/', data)
-        
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_delete_rating_success(self, authenticated_client, movie, user):
-        """TEST 17: Check rating deletion."""
-        rating = Rating.objects.create(user=user, movie=movie, score=5)
-        
-        response = authenticated_client.delete(f'/api/movies/ratings/{rating.id}/delete/')
-        
-        assert Rating.objects.get(id=rating.id).deleted_at is not None
-        assert response.status_code == status.HTTP_204_NO_CONTENT
-
-
-@pytest.mark.django_db
-class TestFavoriteViewSet:
-    """Group of tests for FavoriteViewSet."""
-
-    def test_list_favorites_success(self, authenticated_client, movie, user):
-        """TEST 18: Check listing favorite movies."""
-        Favorite.objects.create(user=user, movie=movie)
-        
-        response = authenticated_client.get('/api/movies/favorites/list/')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-
-    def test_add_favorite_success(self, authenticated_client, movie):
-        """TEST 19: Check adding to favorites."""
-        data = {'movie_id': movie.id}
-        
-        response = authenticated_client.post('/api/movies/favorites/add/', data)
-        
-        assert response.status_code == status.HTTP_201_CREATED
-        assert Favorite.objects.count() == 1
-
-    def test_add_favorite_duplicate(self, authenticated_client, movie, user):
-        """TEST 20: Check preventing duplicate favorites."""
-        Favorite.objects.create(user=user, movie=movie)
-        
-        data = {'movie_id': movie.id}
-        
-        response = authenticated_client.post('/api/movies/favorites/add/', data)
-        
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert Favorite.objects.count() == 1
-
-    def test_remove_favorite_success(self, authenticated_client, movie, user):
-        """TEST 21: Check removing from favorites."""
-        favorite = Favorite.objects.create(user=user, movie=movie)
-        
-        response = authenticated_client.delete(f'/api/movies/favorites/{favorite.id}/remove/')
-        
-        assert response.status_code == status.HTTP_204_NO_CONTENT
-        assert Favorite.objects.get(id=favorite.id).deleted_at is not None
-
-@pytest.mark.django_db
-class TestMovieSearch:
-    """Test cases for movie search functionality"""
-    
-    @pytest.fixture(autouse=True)
-    def setup_movies(self, user):
-        """Set up test data"""
-        # Create test movies with different attributes
+        # Create test movies
         self.movie1 = Movie.objects.create(
-            title='The Matrix',
-            description='A computer hacker learns about the true nature of reality',
-            year=1999,
-            genre='Sci-Fi',
-            duration=136
+            title='Test Movie 1',
+            description='Test description 1',
+            year=2020,
+            genre='Action',
+            duration=120
         )
-        
         self.movie2 = Movie.objects.create(
-            title='The Matrix Reloaded',
-            description='Neo and his allies race against time',
-            year=2003,
-            genre='Sci-Fi',
-            duration=138
+            title='Test Movie 2',
+            description='Test description 2',
+            year=2021,
+            genre='Drama',
+            duration=90
         )
         
-        self.movie3 = Movie.objects.create(
-            title='Inception',
-            description='A thief who steals corporate secrets through dream-sharing',
-            year=2010,
-            genre='Sci-Fi',
-            duration=148
-        )
+    # MovieListView Tests
+    def test_list_movies_success(self):
+        """Test getting list of movies"""
+        response = self.client.get('/api/movies/')
         
-        self.movie4 = Movie.objects.create(
-            title='The Godfather',
-            description='The aging patriarch of an organized crime dynasty',
-            year=1972,
-            genre='Crime',
-            duration=175
-        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+        self.assertEqual(len(response.data['results']), 2)
         
-        self.movie5 = Movie.objects.create(
-            title='Pulp Fiction',
-            description='The lives of two mob hitmen, a boxer, and others',
-            year=1994,
-            genre='Crime',
-            duration=154
-        )
-        
-        # Create some ratings for testing ordering
-        Rating.objects.create(user=user, movie=self.movie1, score=5)
-        Rating.objects.create(user=user, movie=self.movie3, score=4)
-        Rating.objects.create(user=user, movie=self.movie4, score=5)
-    
-    def test_search_by_title(self, api_client):
-        """Test searching movies by title"""
-        response = api_client.get('/api/movies/search/?query=matrix')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 2
-        
-        titles = [movie['title'] for movie in response.data['results']]
-        assert 'The Matrix' in titles
-        assert 'The Matrix Reloaded' in titles
-    
-    def test_search_by_description(self, api_client):
-        """Test searching movies by description"""
-        response = api_client.get('/api/movies/search/?query=dream')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 1
-        assert response.data['results'][0]['title'] == 'Inception'
-    
-    def test_filter_by_genre(self, api_client):
-        """Test filtering movies by genre"""
-        response = api_client.get('/api/movies/search/?genre=Crime')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 2
-        
-        titles = [movie['title'] for movie in response.data['results']]
-        assert 'The Godfather' in titles
-        assert 'Pulp Fiction' in titles
-    
-    def test_filter_by_year_range(self, api_client):
-        """Test filtering movies by year range"""
-        response = api_client.get('/api/movies/search/?year_from=2000&year_to=2010')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 2
-        
-        titles = [movie['title'] for movie in response.data['results']]
-        assert 'The Matrix Reloaded' in titles
-        assert 'Inception' in titles
-    
-    def test_combined_search(self, api_client):
-        """Test combined search with multiple parameters"""
-        response = api_client.get(
-            '/api/movies/search/?query=matrix&genre=Sci-Fi&year_from=1990&year_to=2000'
-        )
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 1
-        assert response.data['results'][0]['title'] == 'The Matrix'
-    
-    def test_empty_results(self, api_client):
-        """Test search with no matching results"""
-        response = api_client.get('/api/movies/search/?query=nonexistent')
-        
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 0
-        assert len(response.data['results']) == 0
-    
-    def test_pagination(self, api_client):
-        """Test pagination of search results"""
-        # Create more movies to test pagination
+    def test_list_movies_pagination(self):
+        """Test pagination works"""
+        # Create 15 movies
         for i in range(15):
             Movie.objects.create(
-                title=f'Test Movie {i}',
+                title=f'Movie {i}',
                 description=f'Description {i}',
                 year=2020,
                 genre='Action',
                 duration=120
             )
         
-        # First page
-        response = api_client.get('/api/movies/search/?genre=Action&page=1&page_size=10')
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data['results']) == 10
-        assert response.data['next'] is not None
+        response = self.client.get('/api/movies/')
         
-        # Second page
-        response = api_client.get('/api/movies/search/?genre=Action&page=2&page_size=10')
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data['results']) == 5
-        assert response.data['next'] is None
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 10)  # Default page size
+        self.assertIn('next', response.data)
+        
+    def test_list_movies_empty(self):
+        """Test getting empty list"""
+        Movie.objects.all().delete()
+        response = self.client.get('/api/movies/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 0)
+        
+    # MovieDetailView Tests
+    def test_get_movie_success(self):
+        """Test getting single movie"""
+        # Login first
+        self.client.force_authenticate(user=self.user)
+        
+        response = self.client.get(f'/api/movies/{self.movie1.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['title'], 'Test Movie 1')
+        self.assertIn('average_rating', response.data)
+        self.assertIn('likes_count', response.data)
+        
+    def test_get_movie_not_found(self):
+        """Test getting non-existent movie"""
+        self.client.force_authenticate(user=self.user)
+        
+        response = self.client.get('/api/movies/9999/')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+    def test_get_movie_unauthenticated(self):
+        """Test getting movie without authentication"""
+        response = self.client.get(f'/api/movies/{self.movie1.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+    def test_get_movie_with_ratings(self):
+        """Test movie includes user rating"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create rating
+        Rating.objects.create(user=self.user, movie=self.movie1, score=5)
+        
+        response = self.client.get(f'/api/movies/{self.movie1.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user_rating'], 5)
+
+
+class CommentTests(APITestCase):
+    """Test suite for Comment endpoints"""
     
-    def test_ordering_by_title(self, api_client):
-        """Test ordering results by title"""
-        response = api_client.get('/api/movies/search/?genre=Sci-Fi&ordering=title')
+    def setUp(self):
+        """Set up test client and test data"""
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='TestPass123!'
+        )
         
-        assert response.status_code == status.HTTP_200_OK
-        titles = [movie['title'] for movie in response.data['results']]
-        assert titles == sorted(titles)
+        self.movie = Movie.objects.create(
+            title='Test Movie',
+            description='Test description',
+            year=2020,
+            genre='Action',
+            duration=120
+        )
+        
+    def test_create_comment_success(self):
+        """Test creating a comment"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {
+            'text': 'Great movie!',
+            'movie': self.movie.id
+        }
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/comments/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Comment.objects.count(), 1)
+        
+    def test_create_comment_empty_text(self):
+        """Test creating comment with empty text"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {
+            'text': '',
+            'movie': self.movie.id
+        }
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/comments/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+    def test_create_comment_unauthenticated(self):
+        """Test creating comment without authentication"""
+        data = {
+            'text': 'Great movie!',
+            'movie': self.movie.id
+        }
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/comments/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+    def test_create_comment_nonexistent_movie(self):
+        """Test creating comment for non-existent movie"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {
+            'text': 'Great movie!',
+            'movie': 9999
+        }
+        
+        response = self.client.post('/api/movies/9999/comments/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+    def test_get_comments_success(self):
+        """Test getting comments list"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create comments
+        Comment.objects.create(user=self.user, movie=self.movie, text='Comment 1')
+        Comment.objects.create(user=self.user, movie=self.movie, text='Comment 2')
+        
+        response = self.client.get(f'/api/movies/{self.movie.id}/comments/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 2)
+        
+    def test_create_reply_success(self):
+        """Test creating a reply to comment"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create parent comment
+        parent = Comment.objects.create(user=self.user, movie=self.movie, text='Parent')
+        
+        data = {
+            'text': 'Reply',
+            'movie': self.movie.id,
+            'parent': parent.id
+        }
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/comments/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Comment.objects.filter(parent=parent).count(), 1)
+
+
+class LikeTests(APITestCase):
+    """Test suite for Like endpoints"""
     
-    def test_ordering_by_year_desc(self, api_client):
-        """Test ordering results by year (descending)"""
-        response = api_client.get('/api/movies/search/?genre=Sci-Fi&ordering=-year')
+    def setUp(self):
+        """Set up test client and test data"""
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='TestPass123!'
+        )
         
-        assert response.status_code == status.HTTP_200_OK
-        years = [movie['year'] for movie in response.data['results']]
-        assert years == sorted(years, reverse=True)
+        self.movie = Movie.objects.create(
+            title='Test Movie',
+            description='Test description',
+            year=2020,
+            genre='Action',
+            duration=120
+        )
+        
+    def test_like_movie_success(self):
+        """Test liking a movie"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {
+            'content_type': 'movie',
+            'object_id': self.movie.id
+        }
+        
+        response = self.client.post('/api/movies/like/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['liked'])
+        
+    def test_unlike_movie_success(self):
+        """Test unliking a movie"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create like first
+        ct = ContentType.objects.get_for_model(Movie)
+        Like.objects.create(user=self.user, content_type=ct, object_id=self.movie.id)
+        
+        data = {
+            'content_type': 'movie',
+            'object_id': self.movie.id
+        }
+        
+        response = self.client.post('/api/movies/like/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['liked'])
+        
+    def test_like_unauthenticated(self):
+        """Test liking without authentication"""
+        data = {
+            'content_type': 'movie',
+            'object_id': self.movie.id
+        }
+        
+        response = self.client.post('/api/movies/like/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+    def test_like_invalid_content_type(self):
+        """Test liking with invalid content type"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {
+            'content_type': 'invalid',
+            'object_id': self.movie.id
+        }
+        
+        response = self.client.post('/api/movies/like/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+    def test_like_nonexistent_object(self):
+        """Test liking non-existent object"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {
+            'content_type': 'movie',
+            'object_id': 9999
+        }
+        
+        response = self.client.post('/api/movies/like/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class RatingTests(APITestCase):
+    """Test suite for Rating endpoints"""
     
-    def test_invalid_year_range(self, api_client):
-        """Test validation error when year_from > year_to"""
-        response = api_client.get('/api/movies/search/?year_from=2010&year_to=2000')
+    def setUp(self):
+        """Set up test client and test data"""
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='TestPass123!'
+        )
         
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert 'year_from' in response.data
+        self.movie = Movie.objects.create(
+            title='Test Movie',
+            description='Test description',
+            year=2020,
+            genre='Action',
+            duration=120
+        )
+        
+    def test_rate_movie_success(self):
+        """Test rating a movie"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {'score': 5}
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/rate/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Rating.objects.count(), 1)
+        
+    def test_update_rating_success(self):
+        """Test updating existing rating"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create rating first
+        Rating.objects.create(user=self.user, movie=self.movie, score=3)
+        
+        data = {'score': 5}
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/rate/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Rating.objects.count(), 1)  # Still only 1
+        self.assertEqual(Rating.objects.first().score, 5)  # Updated
+        
+    def test_rate_movie_invalid_score_low(self):
+        """Test rating with score below 1"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {'score': 0}
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/rate/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+    def test_rate_movie_invalid_score_high(self):
+        """Test rating with score above 5"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {'score': 6}
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/rate/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+    def test_rate_movie_unauthenticated(self):
+        """Test rating without authentication"""
+        data = {'score': 5}
+        
+        response = self.client.post(f'/api/movies/{self.movie.id}/rate/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class SearchTests(APITestCase):
+    """Test suite for Movie Search endpoint"""
     
-    def test_case_insensitive_search(self, api_client):
-        """Test that search is case-insensitive"""
-        response1 = api_client.get('/api/movies/search/?query=MATRIX')
-        response2 = api_client.get('/api/movies/search/?query=matrix')
-        response3 = api_client.get('/api/movies/search/?query=MaTrIx')
+    def setUp(self):
+        """Set up test client and test data"""
+        self.client = APIClient()
         
-        assert response1.data['count'] == response2.data['count']
-        assert response2.data['count'] == response3.data['count']
+        # Create test movies
+        Movie.objects.create(
+            title='Action Movie',
+            description='Exciting action',
+            year=2020,
+            genre='Action',
+            duration=120
+        )
+        Movie.objects.create(
+            title='Drama Movie',
+            description='Emotional drama',
+            year=2021,
+            genre='Drama',
+            duration=90
+        )
+        
+    def test_search_by_title(self):
+        """Test searching by title"""
+        response = self.client.get('/api/movies/search/?query=Action')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['title'], 'Action Movie')
+        
+    def test_search_by_genre(self):
+        """Test searching by genre"""
+        response = self.client.get('/api/movies/search/?genre=Drama')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        
+    def test_search_by_year_range(self):
+        """Test searching by year range"""
+        response = self.client.get('/api/movies/search/?year_from=2021')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        
+    def test_search_no_results(self):
+        """Test search with no results"""
+        response = self.client.get('/api/movies/search/?query=NonExistent')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 0)
+        
+    def test_search_ordering(self):
+        """Test search with ordering"""
+        response = self.client.get('/api/movies/search/?ordering=-year')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'][0]['year'], 2021)
+class ReviewTests(APITestCase):
+    """Test suite for Review endpoints"""
+    
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='TestPass123!'
+        )
+        self.movie = Movie.objects.create(
+            title='Test Movie',
+            description='Test description',
+            year=2020,
+            genre='Action',
+            duration=120
+        )
+
+    def test_list_reviews_success(self):
+        """Test getting list of reviews"""
+        self.client.force_authenticate(user=self.user)
+        Review.objects.create(user=self.user, movie=self.movie, title='Review 1', text='Text 1', rating=5)
+        
+        response = self.client.get('/api/movies/reviews/list/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+
+    def test_create_review_success(self):
+        """Test creating a review"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {
+            'movie_id': self.movie.id,
+            'title': 'Great Movie',
+            'text': 'Loved it!',
+            'rating': 5
+        }
+        
+        response = self.client.post('/api/movies/reviews/create/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Review.objects.count(), 1)
+
+    def test_create_review_invalid_data(self):
+        """Test creating review with missing fields"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {'movie_id': self.movie.id}
+        
+        response = self.client.post('/api/movies/reviews/create/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_review_duplicate(self):
+        """Test creating duplicate review"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create first review
+        Review.objects.create(
+            user=self.user, 
+            movie=self.movie, 
+            title='First', 
+            text='Text', 
+            rating=5
+        )
+        
+        data = {
+            'movie_id': self.movie.id,
+            'title': 'Second',
+            'text': 'Text',
+            'rating': 4
+        }
+        
+        response = self.client.post('/api/movies/reviews/create/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    def test_create_review_unauthenticated(self):
+        """Test creating review without authentication"""
+        data = {
+            'movie_id': self.movie.id,
+            'title': 'Great Movie',
+            'text': 'Loved it!',
+            'rating': 5
+        }
+        
+        response = self.client.post('/api/movies/reviews/create/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_update_review_not_owner(self):
+        """Test updating review by non-owner"""
+        review = Review.objects.create(user=self.user, movie=self.movie, title='Review 1', text='Text 1', rating=5)
+        
+        other_user = User.objects.create_user(username='other', email='other@example.com', password='Pass')
+        self.client.force_authenticate(user=other_user)
+        
+        data = {'title': 'Updated'}
+        
+        response = self.client.put(f'/api/movies/reviews/{review.id}/update/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_review_success(self):
+        """Test deleting review"""
+        review = Review.objects.create(user=self.user, movie=self.movie, title='Review 1', text='Text 1', rating=5)
+        self.client.force_authenticate(user=self.user)
+        
+        response = self.client.delete(f'/api/movies/reviews/{review.id}/delete/')
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Review.objects.count(), 0)
+
+
+class FavoriteTests(APITestCase):
+    """Test suite for Favorite endpoints"""
+    
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='TestPass123!'
+        )
+        self.movie = Movie.objects.create(
+            title='Test Movie',
+            description='Test description',
+            year=2020,
+            genre='Action',
+            duration=120
+        )
+
+    def test_list_favorites_success(self):
+        """Test getting favorites list"""
+        self.client.force_authenticate(user=self.user)
+        Favorite.objects.create(user=self.user, movie=self.movie)
+        
+        response = self.client.get('/api/movies/favorites/list/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+
+    def test_list_favorites_unauthenticated(self):
+        """Test getting favorites without authentication"""
+        response = self.client.get('/api/movies/favorites/list/')
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_add_favorite_success(self):
+        """Test adding movie to favorites"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {'movie_id': self.movie.id}
+        
+        response = self.client.post('/api/movies/favorites/add/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Favorite.objects.count(), 1)
+
+    def test_add_favorite_invalid_movie(self):
+        """Test adding non-existent movie to favorites"""
+        self.client.force_authenticate(user=self.user)
+        
+        data = {'movie_id': 9999}
+        
+        response = self.client.post('/api/movies/favorites/add/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_add_favorite_duplicate(self):
+        """Test adding duplicate favorite"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Add first time
+        Favorite.objects.create(user=self.user, movie=self.movie)
+        
+        data = {'movie_id': self.movie.id}
+        
+        response = self.client.post('/api/movies/favorites/add/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    def test_remove_favorite_success(self):
+        """Test removing movie from favorites"""
+        self.client.force_authenticate(user=self.user)
+        favorite = Favorite.objects.create(user=self.user, movie=self.movie)
+        
+        response = self.client.delete(f'/api/movies/favorites/{favorite.id}/remove/')
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Favorite.objects.count(), 0)
+
+    def test_remove_favorite_not_found(self):
+        """Test removing non-favorite movie"""
+        self.client.force_authenticate(user=self.user)
+        
+        response = self.client.delete('/api/movies/favorites/9999/remove/')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

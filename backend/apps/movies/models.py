@@ -73,6 +73,12 @@ class Movie(AbstractBaseModel):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['genre'], name='movie_genre_idx'),
+            models.Index(fields=['year'], name='movie_year_idx'),
+            models.Index(fields=['-created_at'], name='movie_created_idx'),
+            models.Index(fields=['genre', 'year'], name='movie_genre_year_idx'),
+        ]
 
     @property
     def average_rating(self):
@@ -137,6 +143,11 @@ class Comment(AbstractBaseModel):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['movie'], name='comment_movie_idx'),
+            models.Index(fields=['parent'], name='comment_parent_idx'),
+            models.Index(fields=['-created_at'], name='comment_created_idx'),
+        ]
 
     @property
     def likes_count(self):
@@ -180,6 +191,10 @@ class Rating(AbstractBaseModel):
     class Meta:
         unique_together = ('user', 'movie')
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['movie'], name='rating_movie_idx'),
+            models.Index(fields=['user', 'movie'], name='rating_user_movie_idx'),
+        ]
 
     def __str__(self):
         return f'{self.score} for {self.movie.title} by {self.user.username}'
@@ -252,9 +267,17 @@ class Review(AbstractBaseModel):
         help_text="Rating score (1-5)"
     )
 
+    objects = ActiveManager()
+    all_objects = models.Manager()
+
     class Meta:
         unique_together = ('user', 'movie')
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['movie'], name='review_movie_idx'),
+            models.Index(fields=['user'], name='review_user_idx'),
+            models.Index(fields=['-created_at'], name='review_created_idx'),
+        ]
 
     def __str__(self):
         return f'Review by {self.user.username} for {self.movie.title}'
@@ -278,6 +301,9 @@ class Favorite(AbstractBaseModel):
         on_delete=models.CASCADE, 
         related_name='favorited_by'
     )
+
+    objects = ActiveManager()
+    all_objects = models.Manager()
 
     class Meta:
         unique_together = ('user', 'movie')

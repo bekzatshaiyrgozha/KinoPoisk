@@ -1,10 +1,10 @@
 import { apiClient } from './api/api.client';
 import { API_ENDPOINTS } from '@/constants';
-import type { Comment, CreateCommentData } from '@/types';
+import type { Comment, CreateCommentData, PaginatedResponse } from '@/types';
 
 export const commentService = {
-  async getComments(movieId: number): Promise<Comment[]> {
-    const response = await apiClient.get<Comment[]>(
+  async getComments(movieId: number): Promise<PaginatedResponse<Comment>> {
+    const response = await apiClient.get<PaginatedResponse<Comment>>(
       API_ENDPOINTS.MOVIES.COMMENTS(movieId)
     );
     return response.data;

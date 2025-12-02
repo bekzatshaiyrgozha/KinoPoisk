@@ -64,18 +64,22 @@ class MovieListView(APIView):
         Return:
             - response: Response
         """
+        from .pagination import StandardResultsSetPagination
         
         movies: QuerySet[Movie] = Movie.objects.annotate(
             average_rating=Avg('ratings__score'),
             likes_count=Count('likes', distinct=True)
         )
+        
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        paginated_movies = paginator.paginate_queryset(movies, request)
+        
         serializer: MovieSerializer = MovieSerializer(
-            movies, many=True
+            paginated_movies, many=True, context={'request': request}
         )
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
+        
+        return paginator.get_paginated_response(serializer.data)
 
 
 class MovieDetailView(APIView):
@@ -121,14 +125,17 @@ class MovieDetailView(APIView):
         """
         try:
             movie: Movie = Movie.objects.annotate(
-                average_rating=Avg('ratings__score')
+                average_rating=Avg('ratings__score'),
+                likes_count=Count('likes', distinct=True)
             ).get(id=movie_id)
         except Movie.DoesNotExist:
             return Response(
                 {'detail': 'Movie not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        serializer: MovieSerializer = MovieSerializer(movie)
+        serializer: MovieSerializer = MovieSerializer(
+            movie, context={'request': request}
+        )
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
@@ -175,18 +182,27 @@ class CommentView(APIView):
         Return:
             - response: Response    
         """
+        from .pagination import StandardResultsSetPagination
+        
         comments: QuerySet[Comment] = Comment.objects.filter(
             movie_id=movie_id, parent=None
+        ).select_related(
+            'user', 'movie'
+        ).prefetch_related(
+            'replies__user'
         ).annotate(
             likes_count=Count('likes', distinct=True)
         )
+        
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        paginated_comments = paginator.paginate_queryset(comments, request)
+        
         serializer: CommentSerializer = CommentSerializer(
-            comments, many=True, context={'request': request}
+            paginated_comments, many=True, context={'request': request}
         )
-        return Response(
-            serializer.data, 
-            status=status.HTTP_200_OK
-        )
+        
+        return paginator.get_paginated_response(serializer.data)
     
     @extend_schema(
         summary="Create movie comment",
@@ -574,15 +590,23 @@ class ReviewViewSet(ViewSet):
         *args, **kwargs
     ) -> Response:
         """Get all reviews (optionally filter by movie_id)"""
+        from .pagination import StandardResultsSetPagination
+        
         movie_id = request.query_params.get('movie_id')
         
         if movie_id:
             reviews = Review.objects.filter(movie_id=movie_id)
         else:
             reviews = Review.objects.all()
+            
+        reviews = reviews.select_related('user', 'movie').order_by('-created_at')
         
-        serializer = ReviewSerializer(reviews, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        paginated_reviews = paginator.paginate_queryset(reviews, request)
+        
+        serializer = ReviewSerializer(paginated_reviews, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
         summary="Create a new review",
@@ -651,7 +675,7 @@ class ReviewViewSet(ViewSet):
     ) -> Response:
         """Get a specific review by ID"""
         try:
-            review = Review.objects.get(id=pk)
+            review = Review.objects.select_related('user', 'movie').get(id=pk)
         except Review.DoesNotExist:
             return Response(
                 {'detail': 'Review not found.'},
@@ -905,9 +929,16 @@ class FavoriteViewSet(ViewSet):
         *args, **kwargs
     ) -> Response:
         """Get all favorite movies for the current user"""
-        favorites = Favorite.objects.filter(user=request.user)
-        serializer = FavoriteSerializer(favorites, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        from .pagination import StandardResultsSetPagination
+        
+        favorites = Favorite.objects.filter(user=request.user).select_related('movie').order_by('-created_at')
+        
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        paginated_favorites = paginator.paginate_queryset(favorites, request)
+        
+        serializer = FavoriteSerializer(paginated_favorites, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
         summary="Add movie to favorites",
@@ -1010,11 +1041,11 @@ class MovieSearchPagination(PageNumberPagination):
 
 class MovieSearchView(APIView):
     """
-    View for searching movies with various filters.
+    Advanced movie search view with filtering and pagination.
     
-    Query parameters:
-        - query: Search in title and description (case-insensitive)
-        - genre: Filter by exact genre match
+    Supports filtering by:
+        - query: Search by title and description (case-insensitive)
+        - genre: Filter by genre (exact match)
         - year_from: Minimum release year
         - year_to: Maximum release year
         - ordering: Sort order (default: -created_at)
@@ -1023,7 +1054,11 @@ class MovieSearchView(APIView):
     """
     
     permission_classes = [AllowAny]
-    pagination_class = MovieSearchPagination
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        from .pagination import StandardResultsSetPagination
+        self.pagination_class = StandardResultsSetPagination
     
     @extend_schema(
         summary="Search movies",
@@ -1123,11 +1158,13 @@ class MovieSearchView(APIView):
         if ordering in ['average_rating', '-average_rating']:
             ordering = ordering.replace('average_rating', 'avg_rating')
         
-        movies = movies.order_by(ordering)
+        movies = movies.order_by(ordering)[:100]  
         
         paginator = self.pagination_class()
         paginated_movies = paginator.paginate_queryset(movies, request)
         
-        serializer = MovieSerializer(paginated_movies, many=True)
+        serializer = MovieSerializer(
+            paginated_movies, many=True, context={'request': request}
+        )
         
         return paginator.get_paginated_response(serializer.data)
