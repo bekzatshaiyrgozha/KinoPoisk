@@ -7,7 +7,7 @@ import dj_database_url
 
 
 DEBUG = True
-ALLOWED_HOSTS = ["localhost:8000", "localhost", "localhost:5173"]
+ALLOWED_HOSTS = ["localhost:8000", "localhost", "localhost:5173", "165.227.173.159"]
 
 DATABASES = {
     'default': dj_database_url.config(
@@ -21,6 +21,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost",
     "http://localhost:80",
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "http://165.227.173.159"
 ]
 CORS_ALLOW_CREDENTIALS = True

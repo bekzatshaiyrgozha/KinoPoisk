@@ -35,6 +35,22 @@ export const movieService = {
     return response.data;
   },
 
+  async uploadVideo(movieId: number, file: File): Promise<Movie> {
+    const formData = new FormData();
+    formData.append('video', file);
+
+    const response = await apiClient.put<Movie>(
+      API_ENDPOINTS.MOVIES.VIDEO_UPLOAD(movieId),
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
   async searchMovies(
     params: MovieSearchParams
   ): Promise<PaginatedResponse<Movie>> {

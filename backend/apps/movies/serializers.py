@@ -9,6 +9,7 @@ class MovieSerializer(serializers.ModelSerializer):
 
     average_rating = serializers.FloatField(read_only=True)
     likes_count = serializers.IntegerField(read_only=True)
+    video_url = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     user_rating = serializers.SerializerMethodField()
 
@@ -16,18 +17,29 @@ class MovieSerializer(serializers.ModelSerializer):
         model = Movie
         fields = [
             'id', 'title', 'description', 'year', 'genre',
-            'duration', 'poster', 'average_rating', 'likes_count',
+            'duration', 'poster', 'video', 'video_url',
+            'average_rating', 'likes_count',
             'is_liked', 'user_rating',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'average_rating', 
             'likes_count', 'is_liked', 'user_rating',
+            'video_url',
             'created_at', 'updated_at'
         ]
 
+    def get_video_url(self, obj):
+        request = self.context.get('request') if self.context else None
+        if obj.video:
+            if request:
+                return request.build_absolute_uri(obj.video.url)
+            return obj.video.url
+        return None
+
     def get_is_liked(self, obj):
-        user = self.context.get('request').user if self.context.get('request') else None
+        request = self.context.get('request') if self.context else None
+        user = request.user if request else None
         if user and user.is_authenticated:
             content_type = ContentType.objects.get_for_model(Movie)
             # ActiveManager automatically filters deleted_at__isnull=True
@@ -40,7 +52,8 @@ class MovieSerializer(serializers.ModelSerializer):
     
     def get_user_rating(self, obj):
         """Get the current user's rating for this movie"""
-        user = self.context.get('request').user if self.context.get('request') else None
+        request = self.context.get('request') if self.context else None
+        user = request.user if request else None
         if user and user.is_authenticated:
             rating = Rating.objects.filter(
                 movie=obj,
@@ -315,3 +328,14 @@ class MovieSearchSerializer(serializers.Serializer):
             })
         
         return attrs
+
+class MovieVideoUploadSerializer(serializers.ModelSerializer):
+    """Serializer for uploading/replacing a movie video."""
+
+    class Meta:
+        model = Movie
+        fields = ['video']
+
+    def validate_video(self, value):
+        # Hook for size/type validation if needed
+        return value

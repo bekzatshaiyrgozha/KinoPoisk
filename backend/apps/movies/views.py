@@ -1,8 +1,9 @@
 # Third-party modules
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 
@@ -15,15 +16,17 @@ from django.contrib.contenttypes.models import ContentType
 # Project modules
 from .models import Movie, Comment, Like, Rating
 from .serializers import (
-    MovieSerializer, 
+    MovieSerializer,
     CommentSerializer,
     RatingSerializer,
-    MovieSearchSerializer
+    MovieSearchSerializer,
+    MovieVideoUploadSerializer,
 )
 from apps.abstracts.serializers import (
     ErrorResponseSerializer,
     ValidationErrorResponseSerializer,
 )
+from apps.abstracts.permissions import IsOwnerOrAdmin
 
 # Typing imports
 from typing import Optional, Type
@@ -140,6 +143,60 @@ class MovieDetailView(APIView):
             serializer.data,
             status=status.HTTP_200_OK
         )
+
+
+class MovieVideoUploadView(APIView):
+    """
+    Admin-only endpoint to upload/replace a movie video file.
+    """
+
+    permission_classes = [IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser]
+
+    @extend_schema(
+        summary="Upload/replace movie video",
+        description="Uploads or replaces the video file for the given movie. Admin/staff only.",
+        tags=['Movies'],
+        request=MovieVideoUploadSerializer,
+        responses={
+            200: MovieSerializer,
+            400: ValidationErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        }
+    )
+    def put(
+            self, request: HttpRequest,
+            movie_id: int,
+            *args, **kwargs
+        ) -> Response:
+        try:
+            movie: Movie = Movie.objects.get(id=movie_id)
+        except Movie.DoesNotExist:
+            return Response(
+                {'detail': 'Movie not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = MovieVideoUploadSerializer(
+            movie,
+            data=request.data,
+            partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                MovieSerializer(movie, context={'request': request}).data,
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(
+            self, request: HttpRequest,
+            movie_id: int,
+            *args, **kwargs
+        ) -> Response:
+        """Allow POST as alias for upload."""
+        return self.put(request, movie_id, *args, **kwargs)
 
 
 class CommentView(APIView):
@@ -719,11 +776,16 @@ class ReviewViewSet(ViewSet):
     ) -> Response:
         """Update an existing review (only by the owner)"""
         try:
-            review = Review.objects.get(id=pk, user=request.user)
+            review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
             return Response(
-                {'detail': 'Review not found or you do not have permission.'},
+                {'detail': 'Review not found.'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        if not IsOwnerOrAdmin().has_object_permission(request, self, review):
+            return Response(
+                {'detail': 'You do not have permission to update this review.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         partial = request.method == 'PATCH'
@@ -773,11 +835,16 @@ class ReviewViewSet(ViewSet):
     ) -> Response:
         """Delete a review (only by the owner)"""
         try:
-            review = Review.objects.get(id=pk, user=request.user)
+            review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
             return Response(
-                {'detail': 'Review not found or you do not have permission.'},
+                {'detail': 'Review not found.'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        if not IsOwnerOrAdmin().has_object_permission(request, self, review):
+            return Response(
+                {'detail': 'You do not have permission to delete this review.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         review.delete()
@@ -894,11 +961,16 @@ class RatingViewSet(ViewSet):
     ) -> Response:
         """Delete a rating (only by the owner)"""
         try:
-            rating = Rating.objects.get(id=pk, user=request.user)
+            rating = Rating.objects.get(id=pk)
         except Rating.DoesNotExist:
             return Response(
-                {'detail': 'Rating not found or you do not have permission.'},
+                {'detail': 'Rating not found.'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        if not IsOwnerOrAdmin().has_object_permission(request, self, rating):
+            return Response(
+                {'detail': 'You do not have permission to delete this rating.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         rating.delete()
@@ -1018,11 +1090,16 @@ class FavoriteViewSet(ViewSet):
     ) -> Response:
         """Remove a movie from favorites"""
         try:
-            favorite = Favorite.objects.get(id=pk, user=request.user)
+            favorite = Favorite.objects.get(id=pk)
         except Favorite.DoesNotExist:
             return Response(
                 {'detail': 'Favorite not found.'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        if not IsOwnerOrAdmin().has_object_permission(request, self, favorite):
+            return Response(
+                {'detail': 'You do not have permission to remove this favorite.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         favorite.delete()

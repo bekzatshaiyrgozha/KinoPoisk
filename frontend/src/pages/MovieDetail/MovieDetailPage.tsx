@@ -5,11 +5,14 @@ import { LikeButton } from '@/components/LikeButton';
 import { MovieRating } from '@/components/MovieRating';
 import { CommentList } from '@/components/CommentList';
 import { useMovie } from '@/hooks';
+import { useAuth } from '@/contexts';
+import { VideoPlayer, VideoUploadForm } from '@/components/features/movies';
 import { formatDuration } from '@/utils';
 
 export const MovieDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const { movie, loading, error, refetch } = useMovie(Number(id));
+  const { isAuthenticated, user } = useAuth();
 
   if (loading) {
     return (
@@ -97,6 +100,18 @@ export const MovieDetailPage = () => {
                 Description
               </h2>
               <p className="text-gray-700 leading-relaxed">{movie.description}</p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Video
+              </h2>
+              <VideoPlayer src={movie.video_url || movie.video} title={movie.title} />
+              {isAuthenticated && user?.is_staff && (
+                <div className="mt-4">
+                  <VideoUploadForm movieId={movie.id} onUploaded={refetch} />
+                </div>
+              )}
             </div>
           </div>
         </div>
