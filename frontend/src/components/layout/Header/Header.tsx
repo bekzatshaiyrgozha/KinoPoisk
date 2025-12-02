@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { FaFilm, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import { FaFilm, FaUser, FaSignOutAlt, FaSearch } from 'react-icons/fa';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts';
 import { ROUTES } from '@/constants';
@@ -21,6 +21,16 @@ export const Header = () => {
             <FaFilm className="text-primary-600 text-2xl" />
             <span className="text-xl font-bold text-gray-900">KinoPoisk</span>
           </Link>
+
+          <nav className="flex items-center gap-6">
+            <Link
+              to={ROUTES.SEARCH}
+              className="flex items-center gap-2 text-gray-700 hover:text-primary-600 transition-colors font-medium"
+            >
+              <FaSearch />
+              <span>Поиск</span>
+            </Link>
+          </nav>
 
           <div className="flex items-center gap-4">
             {isAuthenticated ? (

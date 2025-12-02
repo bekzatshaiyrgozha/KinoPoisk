@@ -1,0 +1,1 @@
+export { MovieSearch } from './MovieSearch';

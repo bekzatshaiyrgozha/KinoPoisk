@@ -28,10 +28,15 @@ dependencies = [
     "whitenoise", 
     "django-unfold", 
     "psycopg2-binary", 
-    "dj-database-url"
+    "dj-database-url",
+    "pytest>=8.0.0",
+    "pytest-django>=4.8.0"
 ]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "settings.env.local"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 addopts = "-v --tb=short"
+
+[tool.setuptools.packages.find]
+include = ["apps", "apps.*", "settings", "settings.*"]

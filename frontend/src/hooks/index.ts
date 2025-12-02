@@ -4,3 +4,4 @@ export * from './useClickOutside';
 export * from './useMovies';
 export * from './useMovie';
 export * from './useComments';
+export * from './useMovieSearch';

@@ -1,6 +1,6 @@
 import { apiClient } from './api/api.client';
 import { API_ENDPOINTS } from '@/constants';
-import type { Movie, MovieFilters, PaginatedResponse } from '@/types';
+import type { Movie, MovieFilters, MovieSearchParams, PaginatedResponse } from '@/types';
 
 export const movieService = {
   async getMovies(filters?: MovieFilters): Promise<PaginatedResponse<Movie>> {
@@ -35,8 +35,13 @@ export const movieService = {
     return response.data;
   },
 
-  async searchMovies(query: string): Promise<Movie[]> {
-    const response = await movieService.getMovies({ search: query });
-    return response.results;
+  async searchMovies(
+    params: MovieSearchParams
+  ): Promise<PaginatedResponse<Movie>> {
+    const response = await apiClient.get<PaginatedResponse<Movie>>(
+      API_ENDPOINTS.MOVIES.SEARCH,
+      { params }
+    );
+    return response.data;
   },
 };

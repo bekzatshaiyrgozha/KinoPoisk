@@ -43,6 +43,12 @@ INSTALLED_APPS = DJANGO_AND_THIRD_PARTY_APPS + PROJECT_APPS
 
 
 '''
+Custom User Model
+'''
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
+
+'''
 MIDDLEWARE, TEMPLATES & VALIDATORS
 '''
 
@@ -139,6 +145,27 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.BrowsableAPIRenderer',
     ]
 
+}
+
+"""
+drf-spectacular configuration
+"""
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'KinoPoisk API',
+    'VERSION': '1.2.3',
+    'SERVE_INCLUDE_SCHEMA': True,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'Bearer': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    },
+    'SECURITY': [{'Bearer': []}],
 }
 
 '''

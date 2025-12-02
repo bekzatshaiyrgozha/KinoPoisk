@@ -1,5 +1,7 @@
 # Django modules
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
@@ -49,12 +51,12 @@ class UserLoginSerializer(serializers.Serializer):
     Serializer for user login
     """
 
-    username = serializers.CharField()
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         user = authenticate(
-            username=attrs['username'],
+            email=attrs['email'],
             password=attrs['password']
         )
         if not user:

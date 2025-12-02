@@ -24,6 +24,24 @@ export interface MovieFilters {
   order?: 'asc' | 'desc';
 }
 
+export interface MovieSearchParams {
+  query?: string;
+  genre?: string;
+  year_from?: number;
+  year_to?: number;
+  ordering?: 
+    | 'title' 
+    | '-title' 
+    | 'year' 
+    | '-year' 
+    | 'average_rating' 
+    | '-average_rating' 
+    | 'created_at' 
+    | '-created_at';
+  page?: number;
+  page_size?: number;
+}
+
 export interface MovieCardData {
   id: number;
   title: string;

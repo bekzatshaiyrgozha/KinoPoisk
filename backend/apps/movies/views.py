@@ -3,6 +3,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 # Django modules
 from django.http import HttpRequest
@@ -18,11 +20,17 @@ from .serializers import (
     RatingSerializer,
     MovieSearchSerializer
 )
+from apps.abstracts.serializers import (
+    ErrorResponseSerializer,
+    ValidationErrorResponseSerializer,
+)
 
 # Typing imports
 from typing import Optional, Type
 from django.db.models.query import QuerySet
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.contrib.contenttypes.models import ContentType as ContentTypeModel
 from django.db.models.base import ModelBase
 
@@ -34,6 +42,14 @@ class MovieListView(APIView):
     """
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Get list of all movies",
+        description="Returns a list of all movies with average rating and likes count",
+        tags=['Movies'],
+        responses={
+            200: MovieSerializer(many=True),
+        }
+    )
     def get(
             self, request: HttpRequest,
             *args, **kwargs
@@ -69,6 +85,24 @@ class MovieDetailView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get movie details",
+        description="Returns detailed information about a specific movie by ID",
+        tags=['Movies'],
+        parameters=[
+            OpenApiParameter(
+                name='movie_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Movie ID',
+                required=True
+            ),
+        ],
+        responses={
+            200: MovieSerializer,
+            404: ErrorResponseSerializer,
+        }
+    )
     def get(
             self, request: HttpRequest,
             movie_id: int,
@@ -108,6 +142,23 @@ class CommentView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get movie comments",
+        description="Returns a list of all comments for a movie (including replies)",
+        tags=['Comments'],
+        parameters=[
+            OpenApiParameter(
+                name='movie_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Movie ID',
+                required=True
+            ),
+        ],
+        responses={
+            200: CommentSerializer(many=True),
+        }
+    )
     def get(
             self, request: HttpRequest, 
             movie_id: int, 
@@ -137,6 +188,36 @@ class CommentView(APIView):
             status=status.HTTP_200_OK
         )
     
+    @extend_schema(
+        summary="Create movie comment",
+        description="Creates a new comment for a movie (optionally as a reply to another comment)",
+        tags=['Comments'],
+        request=CommentSerializer,
+        parameters=[
+            OpenApiParameter(
+                name='movie_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Movie ID',
+                required=True
+            ),
+        ],
+        responses={
+            201: CommentSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+        examples=[
+            OpenApiExample(
+                'Example request',
+                value={
+                    'text': 'Great movie!',
+                    'parent': None
+                },
+                request_only=True
+            ),
+        ]
+    )
     def post(
             self, request: HttpRequest, 
             movie_id: int,
@@ -182,6 +263,52 @@ class LikeView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Like/Unlike object",
+        description="Likes or unlikes an object (movie or comment)",
+        tags=['Likes'],
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'content_type': {
+                        'type': 'string',
+                        'enum': ['movie', 'comment'],
+                        'description': 'Object type to like'
+                    },
+                    'object_id': {
+                        'type': 'integer',
+                        'description': 'Object ID'
+                    }
+                },
+                'required': ['content_type', 'object_id']
+            }
+        },
+        responses={
+            200: OpenApiTypes.OBJECT,
+            201: OpenApiTypes.OBJECT,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+        examples=[
+            OpenApiExample(
+                'Like a movie',
+                value={
+                    'content_type': 'movie',
+                    'object_id': 1
+                },
+                request_only=True
+            ),
+            OpenApiExample(
+                'Like a comment',
+                value={
+                    'content_type': 'comment',
+                    'object_id': 5
+                },
+                request_only=True
+            ),
+        ]
+    )
     def post(
             self, request: HttpRequest, 
             *args, **kwargs
@@ -316,6 +443,48 @@ class RatingView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Rate a movie",
+        description="Rates a movie (score from 1 to 5) or updates an existing rating",
+        tags=['Ratings'],
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'score': {
+                        'type': 'integer',
+                        'minimum': 1,
+                        'maximum': 5,
+                        'description': 'Movie rating (1-5)'
+                    }
+                },
+                'required': ['score']
+            }
+        },
+        parameters=[
+            OpenApiParameter(
+                name='movie_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Movie ID',
+                required=True
+            ),
+        ],
+        responses={
+            200: RatingSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+        examples=[
+            OpenApiExample(
+                'Rate a movie',
+                value={
+                    'score': 5
+                },
+                request_only=True
+            ),
+        ]
+    )
     def post(
             self, request: HttpRequest, 
             movie_id: int, 
@@ -362,7 +531,6 @@ class RatingView(APIView):
 
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from .models import Review, Favorite
 from .serializers import (
@@ -380,7 +548,18 @@ class ReviewViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="List all reviews",
+        summary="Get list of all reviews",
+        description="Returns a list of all reviews (optionally filtered by movie_id)",
+        tags=['Reviews'],
+        parameters=[
+            OpenApiParameter(
+                name='movie_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Movie ID for filtering',
+                required=False
+            ),
+        ],
         responses={200: ReviewSerializer(many=True)}
     )
     @action(
@@ -407,8 +586,13 @@ class ReviewViewSet(ViewSet):
 
     @extend_schema(
         summary="Create a new review",
+        description="Creates a new review for a movie",
+        tags=['Reviews'],
         request=ReviewSerializer,
-        responses={201: ReviewSerializer}
+        responses={
+            201: ReviewSerializer,
+            400: ErrorResponseSerializer,
+        }
     )
     @action(
         methods=["POST"],
@@ -437,7 +621,21 @@ class ReviewViewSet(ViewSet):
 
     @extend_schema(
         summary="Get review details",
-        responses={200: ReviewSerializer}
+        description="Returns detailed information about a review by ID",
+        tags=['Reviews'],
+        parameters=[
+            OpenApiParameter(
+                name='pk',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Review ID',
+                required=True
+            ),
+        ],
+        responses={
+            200: ReviewSerializer,
+            404: ErrorResponseSerializer,
+        }
     )
     @action(
         methods=["GET"],
@@ -465,8 +663,23 @@ class ReviewViewSet(ViewSet):
 
     @extend_schema(
         summary="Update a review",
+        description="Updates an existing review (owner only)",
+        tags=['Reviews'],
         request=ReviewSerializer,
-        responses={200: ReviewSerializer}
+        parameters=[
+            OpenApiParameter(
+                name='pk',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Review ID',
+                required=True
+            ),
+        ],
+        responses={
+            200: ReviewSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        }
     )
     @action(
         methods=["PUT", "PATCH"],
@@ -506,7 +719,21 @@ class ReviewViewSet(ViewSet):
 
     @extend_schema(
         summary="Delete a review",
-        responses={204: None}
+        description="Deletes a review (owner only)",
+        tags=['Reviews'],
+        parameters=[
+            OpenApiParameter(
+                name='pk',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Review ID',
+                required=True
+            ),
+        ],
+        responses={
+            204: None,
+            404: ErrorResponseSerializer,
+        }
     )
     @action(
         methods=["DELETE"],
@@ -540,7 +767,18 @@ class RatingViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="List all ratings",
+        summary="Get list of all ratings",
+        description="Returns a list of all ratings (optionally filtered by movie_id)",
+        tags=['Ratings'],
+        parameters=[
+            OpenApiParameter(
+                name='movie_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Movie ID for filtering',
+                required=False
+            ),
+        ],
         responses={200: RatingDetailSerializer(many=True)}
     )
     @action(
@@ -566,9 +804,14 @@ class RatingViewSet(ViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        summary="Create or update a rating",
+        summary="Rate a movie (create or update)",
+        description="Creates or updates a movie rating",
+        tags=['Ratings'],
         request=RatingDetailSerializer,
-        responses={200: RatingDetailSerializer}
+        responses={
+            200: RatingDetailSerializer,
+            400: ErrorResponseSerializer,
+        }
     )
     @action(
         methods=["POST"],
@@ -597,7 +840,21 @@ class RatingViewSet(ViewSet):
 
     @extend_schema(
         summary="Delete a rating",
-        responses={204: None}
+        description="Deletes a movie rating (owner only)",
+        tags=['Ratings'],
+        parameters=[
+            OpenApiParameter(
+                name='pk',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Rating ID',
+                required=True
+            ),
+        ],
+        responses={
+            204: None,
+            404: ErrorResponseSerializer,
+        }
     )
     @action(
         methods=["DELETE"],
@@ -631,7 +888,9 @@ class FavoriteViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="List user's favorite movies",
+        summary="Get list of favorite movies",
+        description="Returns a list of favorite movies for the current user",
+        tags=['Favorites'],
         responses={200: FavoriteSerializer(many=True)}
     )
     @action(
@@ -652,8 +911,13 @@ class FavoriteViewSet(ViewSet):
 
     @extend_schema(
         summary="Add movie to favorites",
+        description="Adds a movie to the current user's favorites list",
+        tags=['Favorites'],
         request=FavoriteSerializer,
-        responses={201: FavoriteSerializer}
+        responses={
+            201: FavoriteSerializer,
+            400: ErrorResponseSerializer,
+        }
     )
     @action(
         methods=["POST"],
@@ -693,7 +957,21 @@ class FavoriteViewSet(ViewSet):
 
     @extend_schema(
         summary="Remove movie from favorites",
-        responses={204: None}
+        description="Removes a movie from the current user's favorites list",
+        tags=['Favorites'],
+        parameters=[
+            OpenApiParameter(
+                name='pk',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Favorite record ID',
+                required=True
+            ),
+        ],
+        responses={
+            204: None,
+            404: ErrorResponseSerializer,
+        }
     )
     @action(
         methods=["DELETE"],
@@ -742,14 +1020,69 @@ class MovieSearchView(APIView):
         - ordering: Sort order (default: -created_at)
         - page: Page number for pagination
         - page_size: Number of results per page (default: 10, max: 50)
-    
-    Example:
-        GET /api/movies/search/?query=matrix&genre=Sci-Fi&year_from=1990
     """
     
     permission_classes = [AllowAny]
     pagination_class = MovieSearchPagination
     
+    @extend_schema(
+        summary="Search movies",
+        description="""
+        Search movies with various filters.
+        
+        Supported parameters:
+        - query: Search by title and description (case-insensitive)
+        - genre: Filter by genre (exact match)
+        - year_from: Minimum release year
+        - year_to: Maximum release year
+        - ordering: Sort order for results
+        - page: Page number for pagination
+        - page_size: Number of results per page (default: 10, max: 50)
+        """,
+        tags=['Movies'],
+        parameters=[
+            OpenApiParameter(
+                name='query',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Search query',
+                required=False
+            ),
+            OpenApiParameter(
+                name='genre',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Movie genre',
+                required=False
+            ),
+            OpenApiParameter(
+                name='year_from',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Minimum release year',
+                required=False
+            ),
+            OpenApiParameter(
+                name='year_to',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Maximum release year',
+                required=False
+            ),
+            OpenApiParameter(
+                name='ordering',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Sort order',
+                required=False,
+                enum=['title', '-title', 'year', '-year', 'average_rating', '-average_rating', 'created_at', '-created_at']
+            ),
+        ],
+        responses={
+            200: MovieSerializer(many=True),
+            400: ErrorResponseSerializer,
+        }
+    )
     def get(self, request: HttpRequest, *args, **kwargs):
         """
         Search movies based on query parameters.
@@ -770,9 +1103,10 @@ class MovieSearchView(APIView):
         year_from = validated_data.get('year_from')
         year_to = validated_data.get('year_to')
         ordering = validated_data.get('ordering', '-created_at')
-        
-        movies = Movie.objects.all()
-        
+        movies = Movie.objects.annotate(
+            avg_rating=Avg('ratings__score')
+        )
+
         if query:
             movies = movies.filter(
                 Q(title__icontains=query) | Q(description__icontains=query)
@@ -786,12 +1120,7 @@ class MovieSearchView(APIView):
         
         if year_to:
             movies = movies.filter(year__lte=year_to)
-        
         if ordering in ['average_rating', '-average_rating']:
-            from django.db.models import Avg
-            movies = movies.annotate(
-                avg_rating=Avg('ratings__score')
-            )
             ordering = ordering.replace('average_rating', 'avg_rating')
         
         movies = movies.order_by(ordering)
