@@ -86,7 +86,6 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_replies(self, obj):
         """Return nested replies for a comment"""
         from django.db.models import Count
-        # ActiveManager automatically filters deleted_at__isnull=True
         replies = obj.replies.annotate(
             likes_count=Count('likes', distinct=True)
         )
@@ -94,7 +93,6 @@ class CommentSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user if self.context.get('request') else None
         content_type = ContentType.objects.get_for_model(Comment)
         
-        # Create a simple serializer for replies to avoid circular reference
         return [
             {
                 'id': reply.id,
