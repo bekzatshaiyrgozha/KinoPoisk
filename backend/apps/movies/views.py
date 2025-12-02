@@ -26,6 +26,7 @@ from apps.abstracts.serializers import (
     ErrorResponseSerializer,
     ValidationErrorResponseSerializer,
 )
+from apps.abstracts.permissions import IsOwnerOrAdmin
 
 # Typing imports
 from typing import Optional, Type
@@ -775,11 +776,16 @@ class ReviewViewSet(ViewSet):
     ) -> Response:
         """Update an existing review (only by the owner)"""
         try:
-            review = Review.objects.get(id=pk, user=request.user)
+            review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
             return Response(
-                {'detail': 'Review not found or you do not have permission.'},
+                {'detail': 'Review not found.'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        if not IsOwnerOrAdmin().has_object_permission(request, self, review):
+            return Response(
+                {'detail': 'You do not have permission to update this review.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         partial = request.method == 'PATCH'
@@ -829,11 +835,16 @@ class ReviewViewSet(ViewSet):
     ) -> Response:
         """Delete a review (only by the owner)"""
         try:
-            review = Review.objects.get(id=pk, user=request.user)
+            review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
             return Response(
-                {'detail': 'Review not found or you do not have permission.'},
+                {'detail': 'Review not found.'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        if not IsOwnerOrAdmin().has_object_permission(request, self, review):
+            return Response(
+                {'detail': 'You do not have permission to delete this review.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         review.delete()
@@ -950,11 +961,16 @@ class RatingViewSet(ViewSet):
     ) -> Response:
         """Delete a rating (only by the owner)"""
         try:
-            rating = Rating.objects.get(id=pk, user=request.user)
+            rating = Rating.objects.get(id=pk)
         except Rating.DoesNotExist:
             return Response(
-                {'detail': 'Rating not found or you do not have permission.'},
+                {'detail': 'Rating not found.'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        if not IsOwnerOrAdmin().has_object_permission(request, self, rating):
+            return Response(
+                {'detail': 'You do not have permission to delete this rating.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         rating.delete()
@@ -1074,11 +1090,16 @@ class FavoriteViewSet(ViewSet):
     ) -> Response:
         """Remove a movie from favorites"""
         try:
-            favorite = Favorite.objects.get(id=pk, user=request.user)
+            favorite = Favorite.objects.get(id=pk)
         except Favorite.DoesNotExist:
             return Response(
                 {'detail': 'Favorite not found.'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        if not IsOwnerOrAdmin().has_object_permission(request, self, favorite):
+            return Response(
+                {'detail': 'You do not have permission to remove this favorite.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         favorite.delete()
