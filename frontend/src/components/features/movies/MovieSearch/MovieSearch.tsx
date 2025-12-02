@@ -121,27 +121,7 @@ export const MovieSearch = ({ onSearch, loading }: MovieSearchProps) => {
           </div>
 
           {/* Ordering */}
-          <div>
-            <label htmlFor="ordering" className="block text-sm font-medium text-gray-700 mb-1">
-              Сортировка
-            </label>
-            <select
-              id="ordering"
-              value={ordering}
-              onChange={(e) => setOrdering(e.target.value as MovieSearchParams['ordering'])}
-              disabled={loading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="-created_at">Сначала новые</option>
-              <option value="created_at">Сначала старые</option>
-              <option value="title">По названию (А-Я)</option>
-              <option value="-title">По названию (Я-А)</option>
-              <option value="-year">По году (убыв.)</option>
-              <option value="year">По году (возр.)</option>
-              <option value="-average_rating">По рейтингу (высокий)</option>
-              <option value="average_rating">По рейтингу (низкий)</option>
-            </select>
-          </div>
+         
         </div>
 
         {/* Action Buttons */}

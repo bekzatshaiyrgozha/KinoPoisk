@@ -10,9 +10,9 @@ export const API_ENDPOINTS = {
     DETAIL: (id: number | string) => `/movies/${id}/`,
     COMMENTS: (id: number | string) => `/movies/${id}/comments/`,
     RATE: (id: number | string) => `/movies/${id}/rate/`,
+    VIDEO_UPLOAD: (id: number | string) => `/movies/${id}/video/`,
     SEARCH: '/movies/search/',
   },
 
   LIKE: '/movies/like/',
 } as const;
-

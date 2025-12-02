@@ -4,6 +4,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
+  is_staff?: boolean;
 }
 
 export interface AuthTokens {
@@ -25,6 +26,4 @@ export interface RegisterData {
   last_name: string;
 }
 
-export interface UserProfile extends User {
-  // Extended profile data can be added here
-}
+export interface UserProfile extends User {}

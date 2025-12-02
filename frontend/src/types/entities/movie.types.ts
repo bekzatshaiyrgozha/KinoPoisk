@@ -6,6 +6,8 @@ export interface Movie {
   genre: string;
   duration: number;
   poster: string;
+  video: string | null;
+  video_url?: string | null;
   average_rating: number;
   likes_count: number;
   is_liked: boolean;

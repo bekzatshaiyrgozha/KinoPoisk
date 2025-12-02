@@ -60,6 +60,12 @@ class Movie(AbstractBaseModel):
         null=True, 
         help_text="Movie poster file path"
     )
+    video = models.FileField(
+        upload_to='videos/',
+        blank=True,
+        null=True,
+        help_text="Movie video file"
+    )
     likes = GenericRelation(
         'Like', 
         related_query_name='movie'
@@ -311,3 +317,4 @@ class Favorite(AbstractBaseModel):
 
     def __str__(self):
         return f'{self.user.username} favorited {self.movie.title}'
+    
