@@ -49,13 +49,11 @@ class Command(BaseCommand):
         self._generate_favorites(users, movies)
 
         elapsed = (datetime.now() - start).total_seconds()
-        self.stdout.write(
-            self.style.SUCCESS(f"\n Done in {elapsed:.2f} seconds.")
-        )
+        self.stdout.write(self.style.SUCCESS(f"\n Done in {elapsed:.2f} seconds."))
 
     def _clear_old_data(self):
-        Review.objects.all().delete()   
-        Favorite.objects.all().delete() 
+        Review.objects.all().delete()
+        Favorite.objects.all().delete()
         Like.objects.all().delete()
         Comment.objects.all().delete()
         Rating.objects.all().delete()
@@ -84,7 +82,9 @@ class Command(BaseCommand):
         for _ in range(self.MOVIE_COUNT):
             title = fake.sentence(nb_words=3).replace(".", "")
             description = fake.paragraph(nb_sentences=6)
-            genre = choice(["Action", "Drama", "Comedy", "Sci-Fi", "Thriller", "Romance"])
+            genre = choice(
+                ["Action", "Drama", "Comedy", "Sci-Fi", "Thriller", "Romance"]
+            )
             duration = randint(60, 180)
             year = randint(1980, 2025)
             movies.append(
@@ -116,22 +116,22 @@ class Command(BaseCommand):
         self.stdout.write("Creating ratings...")
         ratings = []
         created_pairs = set()
-        
+
         target_count = randint(self.MAX_RATINGS // 2, self.MAX_RATINGS)
         attempts = 0
         max_attempts = target_count * 3
-        
+
         while len(ratings) < target_count and attempts < max_attempts:
             user = choice(users)
             movie = choice(movies)
             pair = (user.id, movie.id)
-            
+
             if pair not in created_pairs:
                 score = randint(1, 5)
                 ratings.append(Rating(user=user, movie=movie, score=score))
                 created_pairs.add(pair)
             attempts += 1
-            
+
         Rating.objects.bulk_create(ratings)
         self.stdout.write(self.style.SUCCESS(f"→ {len(ratings)} ratings created."))
 
@@ -142,7 +142,7 @@ class Command(BaseCommand):
         created_triplets = set()
         movie_ct = ContentType.objects.get_for_model(Movie)
         comment_ct = ContentType.objects.get_for_model(Comment)
-        
+
         target_count = randint(self.MAX_LIKES // 2, self.MAX_LIKES)
         attempts = 0
         max_attempts = target_count * 3
@@ -172,12 +172,12 @@ class Command(BaseCommand):
         target_count = 50
         attempts = 0
         max_attempts = target_count * 3
-        
+
         while len(reviews) < target_count and attempts < max_attempts:
             user = choice(users)
             movie = choice(movies)
             pair = (user.id, movie.id)
-            
+
             if pair not in created_pairs:
                 reviews.append(
                     Review(
@@ -185,12 +185,12 @@ class Command(BaseCommand):
                         movie=movie,
                         title=fake.sentence(nb_words=5),
                         text=fake.paragraph(nb_sentences=3),
-                        rating=randint(1, 5)
+                        rating=randint(1, 5),
                     )
                 )
                 created_pairs.add(pair)
             attempts += 1
-            
+
         Review.objects.bulk_create(reviews, ignore_conflicts=True)
         self.stdout.write(self.style.SUCCESS(f"→ {len(reviews)} reviews created."))
 
@@ -201,17 +201,16 @@ class Command(BaseCommand):
         target_count = 30
         attempts = 0
         max_attempts = target_count * 3
-        
+
         while len(favorites) < target_count and attempts < max_attempts:
             user = choice(users)
             movie = choice(movies)
             pair = (user.id, movie.id)
-            
+
             if pair not in created_pairs:
                 favorites.append(Favorite(user=user, movie=movie))
                 created_pairs.add(pair)
             attempts += 1
-            
+
         Favorite.objects.bulk_create(favorites, ignore_conflicts=True)
         self.stdout.write(self.style.SUCCESS(f"→ {len(favorites)} favorites created."))
-

@@ -16,11 +16,12 @@ from faker import Faker
 fake = Faker()
 Faker.seed(42)
 
+
 class Command(BaseCommand):
     help = "Generate fake data for movies, users, comments, ratings, and likes."
 
     USER_COUNT = 20
-    
+
     @transaction.atomic
     def handle(self, *args: Any, **options: Any) -> None:
         start = datetime.now()
@@ -29,9 +30,8 @@ class Command(BaseCommand):
         users = self._generate_users()
 
         elapsed = (datetime.now() - start).total_seconds()
-        self.stdout.write(
-            self.style.SUCCESS(f"\n Done in {elapsed:.2f} seconds.")
-        )
+        self.stdout.write(self.style.SUCCESS(f"\n Done in {elapsed:.2f} seconds."))
+
     def _generate_users(self):
         self.stdout.write("Creating users...")
         users = [
@@ -47,6 +47,3 @@ class Command(BaseCommand):
         User.objects.bulk_create(users)
         self.stdout.write(self.style.SUCCESS(f"→ {len(users)} users created."))
         return list(User.objects.all())
-        
-
-
