@@ -6,7 +6,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 COPY ../backend/pyproject.toml .
 
-RUN uv sync
+RUN uv pip install --system .
+   
 
 COPY ../backend .
 

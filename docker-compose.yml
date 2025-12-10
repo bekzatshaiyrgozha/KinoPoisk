@@ -42,19 +42,7 @@ services:
       - "80:80"
     depends_on:
       - backend
-
-  backend-test:
-    build:
-      context: .
-      dockerfile: dockerfiles/backend.Dockerfile
-    working_dir: /backend
-    command: pytest
-    environment:
-      KINOPOISK_ENV_ID: local
-      DJANGO_SETTINGS_MODULE: settings.env.local
-    volumes:
-      - ./backend:/backend
-
+      
 volumes:
   pgdata:
   pgadmin-data:

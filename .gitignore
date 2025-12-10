@@ -19,3 +19,4 @@ static/
 node_molules/
 *.egg-info
 *.lock
+*.pytest_cache
