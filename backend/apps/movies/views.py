@@ -3,6 +3,10 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from rest_framework.viewsets import ViewSet
+from rest_framework.decorators import action
+
 from rest_framework.parsers import MultiPartParser, FormParser
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
@@ -12,21 +16,26 @@ from django.http import HttpRequest
 from django.db.models import Avg, Count
 from django.contrib.contenttypes.models import ContentType
 
+from django.db.models import Q
+from rest_framework.pagination import PageNumberPagination
 
 # Project modules
-from .models import Movie, Comment, Like, Rating
+from .models import Movie, Comment, Like, Rating, Review, Favorite
 from .serializers import (
     MovieSerializer,
     CommentSerializer,
     RatingSerializer,
     MovieSearchSerializer,
     MovieVideoUploadSerializer,
+    ReviewSerializer,
+    RatingDetailSerializer,
+    FavoriteSerializer,
 )
 from apps.abstracts.serializers import (
     ErrorResponseSerializer,
     ValidationErrorResponseSerializer,
 )
-from apps.abstracts.permissions import IsOwnerOrAdmin
+from apps.accounts.permissions import IsOwnerOrAdmin
 
 # Typing imports
 from typing import Optional, Type
@@ -34,8 +43,8 @@ from django.db.models.query import QuerySet
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
-from django.contrib.contenttypes.models import ContentType as ContentTypeModel
-from django.db.models.base import ModelBase
+from django.contrib.contenttypes.models import ContentType as ContentTypeModel  # noqa: E402
+from django.db.models.base import ModelBase  # noqa: E402
 
 
 class MovieListView(APIView):
@@ -223,7 +232,6 @@ class CommentView(APIView):
             .annotate(likes_count=Count("likes", distinct=True))
         )
 
-        # Apply pagination
         paginator = StandardResultsSetPagination()
         paginated_comments = paginator.paginate_queryset(comments, request)
 
@@ -367,21 +375,14 @@ class LikeView(APIView):
         obj_model: Type[ModelBase] = ct.model_class()
 
         try:
-            obj: ModelBase = obj_model.objects.get(id=object_id)
+            obj_model.objects.get(id=object_id)
         except obj_model.DoesNotExist:
             return Response(
                 {"detail": "Object not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        user: User = request.user
+        user: User = request.user # type: ignore
 
-        # Debug logging
-        print(f"\n=== LIKE DEBUG ===")
-        print(f"User: {user.username}")
-        print(f"Content Type: {content_type_str}")
-        print(f"Object ID: {object_id}")
-
-        # Check for active like
         existing_like: Optional[Like] = Like.objects.filter(
             user=user, content_type=ct, object_id=object_id
         ).first()
@@ -418,24 +419,16 @@ class LikeView(APIView):
         ).first()
 
         if soft_deleted_like:
-            # Restore the soft-deleted like
-            print(f"Restoring soft-deleted like ID: {soft_deleted_like.id}")
             soft_deleted_like.deleted_at = None
             soft_deleted_like.save(update_fields=["deleted_at"])
             new_like = soft_deleted_like
-            print(f"Restored like ID: {new_like.id}")
         else:
-            # Create a new like
-            print("Creating new like...")
             new_like = Like.objects.create(
                 user=user, content_type=ct, object_id=object_id
             )
             print(f"Created like ID: {new_like.id}")
 
         likes_count = Like.objects.filter(content_type=ct, object_id=object_id).count()
-        print(f"Likes count after create/restore: {likes_count}")
-        print("=== END DEBUG ===\n")
-
         return Response(
             {"liked": True, "likes_count": likes_count}, status=status.HTTP_201_CREATED
         )
@@ -518,13 +511,6 @@ class RatingView(APIView):
         )
         serializer: RatingSerializer = RatingSerializer(rating)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-from rest_framework.viewsets import ViewSet
-from rest_framework.decorators import action
-
-from .models import Review, Favorite
-from .serializers import ReviewSerializer, RatingDetailSerializer, FavoriteSerializer
 
 
 class ReviewViewSet(ViewSet):
@@ -915,8 +901,6 @@ class FavoriteViewSet(ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-from django.db.models import Q
-from rest_framework.pagination import PageNumberPagination
 
 
 class MovieSearchPagination(PageNumberPagination):

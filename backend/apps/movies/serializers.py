@@ -55,7 +55,6 @@ class MovieSerializer(serializers.ModelSerializer):
         user = request.user if request else None
         if user and user.is_authenticated:
             content_type = ContentType.objects.get_for_model(Movie)
-            # ActiveManager automatically filters deleted_at__isnull=True
             return Like.objects.filter(
                 content_type=content_type, object_id=obj.id, user=user
             ).exists()
