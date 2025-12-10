@@ -2,10 +2,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /frontend
 
-COPY ../frontend/package.json ./
-COPY ../frontend/package-lock.json ./
+COPY ../frontend/package*.json ./
 
-RUN npm install
+RUN npm ci && npm cache clean --force
 
 COPY ../frontend .
 
