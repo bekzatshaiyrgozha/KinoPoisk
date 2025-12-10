@@ -1,12 +1,15 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from django.contrib.auth.models import BaseUserManager
 
-from apps.accounts.models import CustomUser
+if TYPE_CHECKING:
+    from apps.accounts.models import CustomUser
 
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email: str, password: str, **extra_fields: Any) -> CustomUser:
+    def create_user(
+        self, email: str, password: str, **extra_fields: Any
+    ) -> "CustomUser":
         if not email:
             raise ValueError("Email address is required")
 
@@ -21,7 +24,7 @@ class CustomUserManager(BaseUserManager):
 
     def create_superuser(
         self, email: str, password: str, **extra_fields: Any
-    ) -> CustomUser:
+    ) -> "CustomUser":
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
