@@ -2,10 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /backend
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
 COPY ../backend/pyproject.toml .
 
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir .
+RUN uv sync
 
 COPY ../backend .
 
