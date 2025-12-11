@@ -7,17 +7,12 @@ ENV_POSSIBLE_OPTIONS = (
     "prod",
 )
 
-ENV_ID = config(
-    "KINOPOISK_ENV_ID", 
-    default="local", 
-    cast = str
-)
+ENV_ID = config("KINOPOISK_ENV_ID", default="local", cast=str)
 
-POSTGRESQL_URL=config(
-    "POSTGRESQL_URL", 
+POSTGRESQL_URL = config(
+    "POSTGRESQL_URL",
     default="postgres://myuser:mypassword@localhost:5432/mydatabase",
-    cast=str
+    cast=str,
 )
 
-SECRET_KEY = 'django-insecure-b@wp(sggy#_@61*7gxq5-yxu)y54&t1w#f*f2dbkq(f0kc=1qo'
-
+SECRET_KEY = "django-insecure-b@wp(sggy#_@61*7gxq5-yxu)y54&t1w#f*f2dbkq(f0kc=1qo"

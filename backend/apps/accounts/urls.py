@@ -9,12 +9,11 @@ from .views import (
     UserProfileView,
 )
 
-app_name = 'accounts'
+app_name = "accounts"
 
 urlpatterns = [
-
-    path('register/', register, name='register'),
-    path('login/', login_view, name='login'),
-    path('logout/', LogoutView.as_view(), name='logout'),
-    path('profile/', UserProfileView.as_view(), name='user_profile'),
+    path("register/", register, name="register"),
+    path("login/", login_view, name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
+    path("profile/", UserProfileView.as_view(), name="user_profile"),
 ]

@@ -5,59 +5,58 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('movies', '0001_initial'),
+        ("movies", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='comment',
-            index=models.Index(fields=['movie'], name='comment_movie_idx'),
+            model_name="comment",
+            index=models.Index(fields=["movie"], name="comment_movie_idx"),
         ),
         migrations.AddIndex(
-            model_name='comment',
-            index=models.Index(fields=['parent'], name='comment_parent_idx'),
+            model_name="comment",
+            index=models.Index(fields=["parent"], name="comment_parent_idx"),
         ),
         migrations.AddIndex(
-            model_name='comment',
-            index=models.Index(fields=['-created_at'], name='comment_created_idx'),
+            model_name="comment",
+            index=models.Index(fields=["-created_at"], name="comment_created_idx"),
         ),
         migrations.AddIndex(
-            model_name='movie',
-            index=models.Index(fields=['genre'], name='movie_genre_idx'),
+            model_name="movie",
+            index=models.Index(fields=["genre"], name="movie_genre_idx"),
         ),
         migrations.AddIndex(
-            model_name='movie',
-            index=models.Index(fields=['year'], name='movie_year_idx'),
+            model_name="movie",
+            index=models.Index(fields=["year"], name="movie_year_idx"),
         ),
         migrations.AddIndex(
-            model_name='movie',
-            index=models.Index(fields=['-created_at'], name='movie_created_idx'),
+            model_name="movie",
+            index=models.Index(fields=["-created_at"], name="movie_created_idx"),
         ),
         migrations.AddIndex(
-            model_name='movie',
-            index=models.Index(fields=['genre', 'year'], name='movie_genre_year_idx'),
+            model_name="movie",
+            index=models.Index(fields=["genre", "year"], name="movie_genre_year_idx"),
         ),
         migrations.AddIndex(
-            model_name='rating',
-            index=models.Index(fields=['movie'], name='rating_movie_idx'),
+            model_name="rating",
+            index=models.Index(fields=["movie"], name="rating_movie_idx"),
         ),
         migrations.AddIndex(
-            model_name='rating',
-            index=models.Index(fields=['user', 'movie'], name='rating_user_movie_idx'),
+            model_name="rating",
+            index=models.Index(fields=["user", "movie"], name="rating_user_movie_idx"),
         ),
         migrations.AddIndex(
-            model_name='review',
-            index=models.Index(fields=['movie'], name='review_movie_idx'),
+            model_name="review",
+            index=models.Index(fields=["movie"], name="review_movie_idx"),
         ),
         migrations.AddIndex(
-            model_name='review',
-            index=models.Index(fields=['user'], name='review_user_idx'),
+            model_name="review",
+            index=models.Index(fields=["user"], name="review_user_idx"),
         ),
         migrations.AddIndex(
-            model_name='review',
-            index=models.Index(fields=['-created_at'], name='review_created_idx'),
+            model_name="review",
+            index=models.Index(fields=["-created_at"], name="review_created_idx"),
         ),
     ]

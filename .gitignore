@@ -3,6 +3,7 @@ db.sqlite3
 __pycache__/
 
 venv/
+.venv/
 
 .idea/
 .vscode/
@@ -16,3 +17,6 @@ static/
 
 
 node_molules/
+*.egg-info
+*.lock
+*.pytest_cache
