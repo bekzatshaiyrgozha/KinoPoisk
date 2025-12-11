@@ -1,20 +1,33 @@
-# Django REST framework modules
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
+# Python modues 
+from typing import Any,Optional
 
-# Django modules
-from django.contrib.auth import logout
+#Django Modules 
+from django.contrib.auth import logout,get_user_model
 from django.http import HttpRequest
+
+# Django REST Framework
+from rest_framework.viewsets import ViewSet
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.request import Request as DRFRequest
+from rest_framework.response import Response as DRFResponse
+from rest_framework.status import (
+    HTTP_200_OK,
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST,
+    HTTP_405_METHOD_NOT_ALLOWED
+)
+from rest_framework.decorators import action
 
 # Third-party modules
 from rest_framework_simplejwt.tokens import RefreshToken
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 # Project modules
-from .serializers import UserSerializer, UserRegistrationSerializer, UserLoginSerializer
+from .serializers import (
+    UserSerializer,
+    UserRegistrationSerializer,
+    UserLoginSerializer,
+)
 from apps.abstracts.serializers import (
     ErrorResponseSerializer,
     ValidationErrorResponseSerializer,
@@ -22,215 +35,121 @@ from apps.abstracts.serializers import (
     AuthResponseSerializer,
 )
 
-# Typing imports
-from typing import Any, Dict, Tuple
-from django.contrib.auth import get_user_model
+User =get_user_model()
 
-User = get_user_model()
-from rest_framework.serializers import Serializer
-
-
-@extend_schema(
-    summary="User registration",
-    description="Registers a new user and returns JWT tokens (access and refresh)",
-    tags=["Authentication"],
-    request=UserRegistrationSerializer,
-    responses={
-        201: AuthResponseSerializer,
-        400: ValidationErrorResponseSerializer,
-    },
-    examples=[
-        OpenApiExample(
-            "Registration request",
-            value={
-                "username": "newuser",
-                "email": "user@example.com",
-                "first_name": "John",
-                "last_name": "Doe",
-                "password": "securepassword123",
-                "password_confirm": "securepassword123",
-            },
-            request_only=True,
-        ),
-    ],
-)
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def register(request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
+class AuthViewSet(ViewSet):
     """
-    User registration endpoint (JWT access + refresh)
-
-    Params:
-        - request: HttpRequest
-        - *args
-        - **kwargs
-    Return:
-        - response: Response
+    VIew set for haning auth-related endpoints related to the registration,logout,login
     """
-    serializer: UserRegistrationSerializer = UserRegistrationSerializer(
-        data=request.data
-    )
-    if serializer.is_valid():
-        user: User = serializer.save()
-        refresh: RefreshToken = RefreshToken.for_user(user)
-        return Response(
-            {
-                "user": UserSerializer(user).data,
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "message": "User registered successfully",
-            },
-            status=status.HTTP_201_CREATED,
-        )
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@extend_schema(
-    summary="User login",
-    description="Authenticates a user and returns JWT tokens (access and refresh)",
-    tags=["Authentication"],
-    request=UserLoginSerializer,
-    responses={
-        200: AuthResponseSerializer,
-        400: ValidationErrorResponseSerializer,
-    },
-    examples=[
-        OpenApiExample(
-            "Login request",
-            value={"username": "testuser", "password": "password123"},
-            request_only=True,
-        ),
-    ],
-)
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def login_view(request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
-    """
-    User login endpoint (JWT access + refresh)
-
-    Params:
-        - request: HttpRequest
-        - *args
-        - **kwargs
-    Return:
-        - response: Response
-    """
-    serializer: UserLoginSerializer = UserLoginSerializer(data=request.data)
-    if serializer.is_valid():
-        user: User = serializer.validated_data["user"]
-        refresh: RefreshToken = RefreshToken.for_user(user)
-        return Response(
-            {
-                "user": UserSerializer(user).data,
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "message": "Login successful",
-            },
-            status=status.HTTP_200_OK,
-        )
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class LogoutView(APIView):
-    """
-    User logout endpoint — blacklists the refresh token
-    """
-
-    permission_classes = [IsAuthenticated]
+    permmission_classes=(AllowAny,)
 
     @extend_schema(
-        summary="User logout",
-        description="Logs out the current authenticated user.",
-        tags=["Authentication"],
+        summary="User Registration",
+        request=UserRegistrationSerializer,
         responses={
-            200: SuccessMessageSerializer,
-        },
+            HTTP_201_CREATED:OpenApiResponse(
+                description="Succesful registration",
+                response=AuthResponseSerializer
+            ),
+            HTTP_400_BAD_REQUEST:OpenApiResponse(
+                description="Bad request",
+                response=ValidationErrorResponseSerializer
+            ),
+        }
     )
-    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
+    @action(
+        methods=("POST",),
+        detail=False,
+        url_path="register",
+        url_name="register",
+    )
+    def register(
+        self,
+        request:DRFRequest,
+        *args:tuple[Any,...],
+        **kwargs:dict[str,Any]
+    )->DRFResponse:
         """
-        Logout user. Optionally blacklist refresh token if provided.
+       Holly shit this is docstrings  
+       Handle POST request for user registration 
 
-        Params:
-            - request: HttpRequest
-            - *args
-            - **kwargs
-        Return:
-            - response: Response
+       Parameters:
+       reqeust:DrfRequest, 
+
+
+       Return 
+       a respone containig user data and jwt tokens
         """
-        try:
-            refresh_token: str | None = request.data.get("refresh")
-
-            # If refresh token is provided, blacklist it
-            if refresh_token:
-                try:
-                    token: RefreshToken = RefreshToken(refresh_token)
-                    token.blacklist()
-                except Exception:
-                    # If token is invalid or already blacklisted, continue with logout
-                    pass
-
-            logout(request)
-            return Response(
-                {"message": "Successfully logged out"}, status=status.HTTP_200_OK
+        serializer:UserRegistrationSerializer=UserRegistrationSerializer(
+            data=request.data
             )
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        
+        user: User = serializer.save()
+        refresh_token:RefreshToken=RefreshToken.for_user(user)
+        access_token:str=str(refresh_token.access_token)
 
-
-class UserProfileView(APIView):
-    """
-    User profile endpoint
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        summary="Get user profile",
-        description="Returns information about the current authenticated user",
-        tags=["Authentication"],
-        responses={
-            200: UserSerializer,
-        },
-    )
-    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
-        """
-        Get user profile
-
-        Params:
-            - request: HttpRequest
-            - *args
-            - **kwargs
-        Return:
-            - response: Response
-        """
-        serializer: UserSerializer = UserSerializer(request.user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        summary="Update user profile",
-        description="Updates information about the current authenticated user",
-        tags=["Authentication"],
-        request=UserSerializer,
-        responses={
-            200: UserSerializer,
-            400: ValidationErrorResponseSerializer,
-        },
-    )
-    def put(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
-        """
-        Update user profile
-
-        Params:
-            - request: HttpRequest
-            - *args
-            - **kwargs
-        Return:
-            - response: Response
-        """
-        serializer: UserSerializer = UserSerializer(
-            request.user, data=request.data, partial=True
+        return DRFResponse(
+            data={
+                "user":UserSerializer(user).data, 
+                "refresh":str(refresh_token),
+                "access":access_token, 
+                "message":"User registred sucessfully",
+            },
+            status=HTTP_201_CREATED
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    @extend_schema(
+        summary="User Login", 
+        request=UserLoginSerializer, 
+        responses={
+            HTTP_200_OK:OpenApiResponse(
+                description="Succesfully logined",
+                response=AuthResponseSerializer,
+            ),
+            HTTP_400_BAD_REQUEST:OpenApiResponse(
+                description="Bad request",
+                response=ValidationErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED:OpenApiResponse(
+                description="Method not allowed",
+                response=ValidationErrorResponseSerializer,
+            )
+        }
+    )
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="login",
+        url_name="login",
+    )
+    def login(
+        self,
+        request:DRFRequest,
+        *args:tuple[Any,...],
+        **kwargs:dict[str,Any],
+    )->DRFResponse:
+        """
+       User login get in the input request with the DrfRequest 
+
+       in output get response using data and jwt tokens
+        """
+        seralizer:UserLoginSerializer=UserLoginSerializer(data=request.data)
+        seralizer.is_valid(raise_exception=True)
+        user:User=seralizer.validate_data.pop("user")
+
+        refresh_token:RefreshToken=RefreshToken.for_user(user)
+        acccess_token:str=str(refresh_token.access_token)
+
+        return DRFResponse(
+            data={
+                "user":UserSerializer(user).data, 
+                "refresh":str(refresh_token),
+                "access":acccess_token,
+                "message":"Login suceessfull!!",
+            },
+            status=HTTP_200_OK
+        )
+    
+    
