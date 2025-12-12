@@ -1,19 +1,23 @@
-# Django module
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 
 # Project modules
 from .views import (
-    register,
-    login_view,
-    LogoutView,
-    UserProfileView,
+    AuthViewSet,
+    UserProfileViewSet,
 )
 
 app_name = "accounts"
 
 urlpatterns = [
-    path("register/", register, name="register"),
-    path("login/", login_view, name="login"),
-    path("logout/", LogoutView.as_view(), name="logout"),
-    path("profile/", UserProfileView.as_view(), name="user_profile"),
+    
+    path("register/", AuthViewSet.as_view({"post": "register"}), name="register"),
+    path("login/", AuthViewSet.as_view({"post": "login"}), name="login"),
+    path("logout/", AuthViewSet.as_view({"post": "logout"}), name="logout"),
+    
+    path("profile/", UserProfileViewSet.as_view({
+        "get": "get_profile",
+        "put": "update_profile",
+        "patch": "update_profile"
+    }), name="profile"),
 ]

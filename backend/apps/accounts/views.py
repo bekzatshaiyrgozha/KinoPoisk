@@ -14,7 +14,8 @@ from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
-    HTTP_405_METHOD_NOT_ALLOWED
+    HTTP_405_METHOD_NOT_ALLOWED,
+    HTTP_401_UNAUTHORIZED
 )
 from rest_framework.decorators import action
 
@@ -41,7 +42,7 @@ class AuthViewSet(ViewSet):
     """
     VIew set for haning auth-related endpoints related to the registration,logout,login
     """
-    permmission_classes=(AllowAny,)
+    permission_classes=(AllowAny,)
 
     @extend_schema(
         summary="User Registration",
@@ -119,7 +120,7 @@ class AuthViewSet(ViewSet):
         }
     )
     @action(
-        methods=["POST"],
+        methods=("POST",),
         detail=False,
         url_path="login",
         url_name="login",
@@ -137,7 +138,7 @@ class AuthViewSet(ViewSet):
         """
         seralizer:UserLoginSerializer=UserLoginSerializer(data=request.data)
         seralizer.is_valid(raise_exception=True)
-        user:User=seralizer.validate_data.pop("user")
+        user:User=seralizer.validated_data.pop("user")
 
         refresh_token:RefreshToken=RefreshToken.for_user(user)
         acccess_token:str=str(refresh_token.access_token)
@@ -152,4 +153,146 @@ class AuthViewSet(ViewSet):
             status=HTTP_200_OK
         )
     
+    @extend_schema(
+        summary="User logout",
+        responses={
+            HTTP_200_OK:OpenApiResponse(
+                description="Succesfully logged out",
+                response=SuccessMessageSerializer,
+            
+            ),
+            HTTP_400_BAD_REQUEST:OpenApiResponse(
+                description="Bad request",
+                response=ErrorResponseSerializer,
+            ),
+        }
+    )
+    @action(
+        methods=("POST",),
+        detail=False,
+        url_path="logout",
+        url_name="logout",
+        permission_classes=(IsAuthenticated,)
+    )
+    def logout(
+        self,
+        request:DRFRequest,
+        *args:tuple[Any,...],
+        **kwargs:dict[str,Any],
+    )->DRFResponse:
+        """
+        handling post request to logout 
+        using DrfRequest 
+
+        and in the end we get the suceesfiluu logout 
+
+        """
+        try:
+            refresh_token:Optional[str]=request.data.get("refresh")
+
+            if refresh_token:
+                try:
+                    token:RefreshToken=RefreshToken(refresh_token)
+                    token.blacklist()
+                except Exception:
+                    pass 
+            
+            logout(request)
+
+            return DRFResponse(
+                data={"message":"Suceesfully logout from the KinoPoisk"},
+                status=HTTP_200_OK
+                    
+            )
+        except Exception as e:
+            return DRFResponse(
+                data={"error":str(e)},
+                status=HTTP_400_BAD_REQUEST
+            )
+
+
+class UserProfileViewSet(ViewSet):
+    """
+   Operation for handling user profile
+    """
+    permission_classes = (IsAuthenticated,)
     
+    @extend_schema(
+        summary="Get User Profile",
+        responses={
+            HTTP_200_OK:OpenApiResponse(
+                description="Return the profile data",
+                response=UserSerializer,
+            ),
+        }
+    )
+    @action(
+        methods=("GET",),
+        detail=False,
+        url_path="profile",
+        url_name="profile",
+    )
+    def get_profile(
+        self,
+        request:DRFRequest,
+        *args:tuple[Any,...],
+        **kwargs:dict[str,Any]
+    )->DRFResponse:
+        """
+       this is endpoint for 
+       getting userproflie 
+       and in the end you get the user profile like the data
+        """
+        user:User=request.user 
+
+        return DRFResponse(
+            data=UserSerializer(user).data,
+            status=HTTP_200_OK,
+        )
+    @extend_schema(
+        summary="Updating the Profile User",
+        request=UserSerializer,
+        responses={
+            HTTP_200_OK:OpenApiResponse(
+                description="Returns the updated user profile",
+                response=UserSerializer,
+            ),
+            HTTP_400_BAD_REQUEST:OpenApiResponse(
+                description="Bad request due to invalid data",
+                response=ValidationErrorResponseSerializer,
+            ),
+            HTTP_401_UNAUTHORIZED:OpenApiResponse(
+                description="Unauthorized to perform this action",
+                response=ErrorResponseSerializer,
+            ),
+        }
+    )
+    @action(
+        methods=("PUT","PATCH"),
+        detail=False,
+        url_path="profile",
+        url_name="update-profile",
+    )
+    def update_profile(
+        self,
+        request:DRFRequest,
+        *args:tuple[Any,...],
+        **kwargs:dict[str,Any],
+    )->DRFResponse:
+        """
+        Updating the user Profile using this endpoint, 
+        getting the result with the updaed the user profile
+        """
+
+        serializer:UserSerializer=UserSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return DRFResponse(
+            data=serializer.data,
+            status=HTTP_200_OK,
+        )
