@@ -3,6 +3,7 @@ from typing import Any
 
 # Django modules
 from django.contrib.auth import authenticate, get_user_model, logout
+from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -58,12 +59,15 @@ class AuthViewSet(ViewSet):
         if password != password_confirm:
             raise ValidationError({"password_confirm": ["Passwords do not match"]})
 
-        user = User.objects.create_user(
-            email=serializer.validated_data["email"],
-            first_name=serializer.validated_data["first_name"],
-            last_name=serializer.validated_data["last_name"],
-            password=password,
-        )
+        try:
+            user = User.objects.create_user(
+                email=serializer.validated_data["email"],
+                first_name=serializer.validated_data["first_name"],
+                last_name=serializer.validated_data["last_name"],
+                password=password,
+            )
+        except IntegrityError:
+            raise ValidationError({"email": ["User with this email already exists"]})
 
         refresh = RefreshToken.for_user(user)
 

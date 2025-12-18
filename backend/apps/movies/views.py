@@ -110,6 +110,7 @@ class MovieViewSet(ViewSet):
                 likes_count=Count("likes", distinct=True),
             )
             .prefetch_related(prefetch_likes, prefetch_ratings)
+            .order_by("-created_at")
             .all()
         )
 
@@ -332,6 +333,7 @@ class MovieViewSet(ViewSet):
                 prefetch_replies_likes,
             )
             .annotate(likes_count=Count("likes", distinct=True))
+            .order_by("-created_at")
         )
 
         paginator = StandardResultsSetPagination()
