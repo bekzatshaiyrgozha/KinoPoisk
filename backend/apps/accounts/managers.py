@@ -1,5 +1,7 @@
+# Python modules
 from typing import Any, TYPE_CHECKING
 
+# Django modules
 from django.contrib.auth.models import BaseUserManager
 
 if TYPE_CHECKING:
@@ -7,6 +9,11 @@ if TYPE_CHECKING:
 
 
 class CustomUserManager(BaseUserManager):
+    """
+    Custom user manager where email is the unique identifier
+    for authentication instead of usernames.
+    """
+
     def create_user(
         self, email: str, password: str, **extra_fields: Any
     ) -> "CustomUser":

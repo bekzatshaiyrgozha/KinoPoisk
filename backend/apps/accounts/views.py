@@ -1,322 +1,181 @@
-# Python modues
-from typing import Any, Optional
-
-# Django Modules
-from django.contrib.auth import logout, get_user_model
-
-# Django REST Framework
-from rest_framework.viewsets import ViewSet
+# Django modules
+from django.contrib.auth import authenticate, get_user_model, logout
+from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.request import Request as DRFRequest
-from rest_framework.response import Response as DRFResponse
+from rest_framework.response import Response
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
-    HTTP_405_METHOD_NOT_ALLOWED,
     HTTP_401_UNAUTHORIZED,
-    HTTP_403_FORBIDDEN,
+    HTTP_405_METHOD_NOT_ALLOWED,
 )
-from rest_framework.decorators import action
-
-# Third-party modules
+from rest_framework.viewsets import ViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
-from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 # Project modules
-from .serializers import (
-    UserSerializer,
-    UserRegistrationSerializer,
-    UserLoginSerializer,
+from apps.abstracts.serializers import ErrorResponseSerializer
+from apps.accounts.serializers import UserSerializer
+from apps.accounts.serializers_requests import (
+    LoginRequestSerializer,
+    RegistrationRequestSerializer,
 )
-from apps.abstracts.serializers import (
-    ErrorResponseSerializer,
-    ValidationErrorResponseSerializer,
-    SuccessMessageSerializer,
-    AuthResponseSerializer,
+from apps.accounts.serializers_responses import (
+    UserSuccessResponseSerializer,
+    RegistrationErrorResponseSerializer,
+    LoginErrorResponseSerializer,
+    AuthenticationErrorResponseSerializer,
+    ProfileUpdateErrorResponseSerializer,
 )
 
 User = get_user_model()
 
 
 class AuthViewSet(ViewSet):
-    """
-    ViewSet for handling auth-related endpoints: registration, login, and logout.
-    """
-
     permission_classes = (AllowAny,)
 
     @extend_schema(
-        summary="User Registration",
-        request=UserRegistrationSerializer,
+        request=RegistrationRequestSerializer,
         responses={
-            HTTP_201_CREATED: OpenApiResponse(
-                description="Successful registration", response=AuthResponseSerializer
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request", response=ValidationErrorResponseSerializer
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_201_CREATED: UserSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: RegistrationErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    @action(
-        methods=("POST",),
-        detail=False,
-        url_path="register",
-        url_name="register",
-    )
-    def register(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle POST request for user registration.
-
-        Parameters:
-            request (DRFRequest): The request object containing registration data.
-
-        Returns:
-            DRFResponse: A response containing user data and JWT tokens.
-        """
-        serializer: UserRegistrationSerializer = UserRegistrationSerializer(
-            data=request.data
-        )
+    @action(methods=["POST"], detail=False, url_path="register")
+    def register(self, request) -> Response:
+        serializer = RegistrationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user: User = serializer.save()
-        refresh_token: RefreshToken = RefreshToken.for_user(user)
-        access_token: str = str(refresh_token.access_token)
+        password: str = serializer.validated_data["password"]
+        password_confirm: str = serializer.validated_data["password_confirm"]
 
-        return DRFResponse(
-            data={
-                "user": UserSerializer(user).data,
-                "refresh": str(refresh_token),
-                "access": access_token,
+        if password != password_confirm:
+            raise ValidationError({"password_confirm": ["Passwords do not match"]})
+
+        user = User.objects.create_user(
+            email=serializer.validated_data["email"],
+            first_name=serializer.validated_data["first_name"],
+            last_name=serializer.validated_data["last_name"],
+            password=password,
+        )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response(
+            {
+                "success": True,
                 "message": "User registered successfully",
+                "data": UserSerializer(user).data,
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
             },
             status=HTTP_201_CREATED,
         )
 
     @extend_schema(
-        summary="User Login",
-        request=UserLoginSerializer,
+        request=LoginRequestSerializer,
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Successfully logged in",
-                response=AuthResponseSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ValidationErrorResponseSerializer,
-            ),
+            HTTP_200_OK: UserSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: LoginErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    @action(
-        methods=("POST",),
-        detail=False,
-        url_path="login",
-        url_name="login",
-    )
-    def login(
-        self,
-        request: DRFRequest,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handle POST request for user login.
+    @action(methods=["POST"], detail=False, url_path="login")
+    def login(self, request) -> Response:
+        serializer = LoginRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        Parameters:
-            request (DRFRequest): The request object containing login credentials.
+        user = authenticate(
+            request=request,
+            email=serializer.validated_data["email"],
+            password=serializer.validated_data["password"],
+        )
 
-        Returns:
-            DRFResponse: A response containing user data and JWT tokens.
-        """
-        seralizer: UserLoginSerializer = UserLoginSerializer(data=request.data)
-        seralizer.is_valid(raise_exception=True)
-        user: User = seralizer.validated_data.pop("user")
+        if not user:
+            raise ValidationError({"non_field_errors": ["Invalid credentials"]})
 
-        refresh_token: RefreshToken = RefreshToken.for_user(user)
-        acccess_token: str = str(refresh_token.access_token)
+        refresh = RefreshToken.for_user(user)
 
-        return DRFResponse(
-            data={
-                "user": UserSerializer(user).data,
-                "refresh": str(refresh_token),
-                "access": acccess_token,
+        return Response(
+            {
+                "success": True,
                 "message": "Login successful",
+                "data": UserSerializer(user).data,
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
             },
             status=HTTP_200_OK,
         )
 
     @extend_schema(
-        summary="User logout",
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Successfully logged out",
-                response=SuccessMessageSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized - Authentication credentials were not provided.",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Forbidden - You do not have permission to perform this action.",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: ErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: AuthenticationErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
     @action(
-        methods=("POST",),
+        methods=["POST"],
         detail=False,
         url_path="logout",
-        url_name="logout",
-        permission_classes=(IsAuthenticated,),
+        permission_classes=[IsAuthenticated],
     )
-    def logout(
-        self,
-        request: DRFRequest,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handle POST request for user logout.
-        Blacklists the refresh token if provided.
+    def logout_user(self, request) -> Response:
+        refresh_token: str | None = request.data.get("refresh")
 
-        Parameters:
-            request (DRFRequest): The request object containing the refresh token.
+        if not refresh_token:
+            raise ValidationError({"refresh": ["Refresh token is required"]})
 
-        Returns:
-            DRFResponse: A success message.
-        """
-        try:
-            refresh_token: Optional[str] = request.data.get("refresh")
+        token = RefreshToken(refresh_token)
+        token.blacklist()
 
-            if refresh_token:
-                try:
-                    token: RefreshToken = RefreshToken(refresh_token)
-                    token.blacklist()
-                except Exception:
-                    pass
+        logout(request)
 
-            logout(request)
-
-            return DRFResponse(
-                data={"message": "Successfully logged out"},
-                status=HTTP_200_OK,
-            )
-        except Exception as e:
-            return DRFResponse(data={"error": str(e)}, status=HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "success": True,
+                "message": "Successfully logged out",
+            },
+            status=HTTP_200_OK,
+        )
 
 
 class UserProfileViewSet(ViewSet):
-    """
-    Operation for handling user profile
-    """
-
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Get User Profile",
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Return the profile data",
-                response=UserSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized - Authentication credentials were not provided.",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Forbidden - You do not have permission to perform this action.",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: UserSuccessResponseSerializer,
+            HTTP_401_UNAUTHORIZED: AuthenticationErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    @action(
-        methods=("GET",),
-        detail=False,
-        url_path="profile",
-        url_name="profile",
-    )
-    def get_profile(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Retrieve the authenticated user's profile.
-
-        Returns:
-            DRFResponse: The user's profile data.
-        """
-        user: User = request.user
-
-        return DRFResponse(
-            data=UserSerializer(user).data,
+    @action(methods=["GET"], detail=False, url_path="profile")
+    def get_profile(self, request) -> Response:
+        return Response(
+            {
+                "success": True,
+                "data": UserSerializer(request.user).data,
+            },
             status=HTTP_200_OK,
         )
 
     @extend_schema(
-        summary="Updating the Profile User",
         request=UserSerializer,
         responses={
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Forbidden - You do not have permission to perform this action.",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_200_OK: OpenApiResponse(
-                description="Returns the updated user profile",
-                response=UserSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request due to invalid data",
-                response=ValidationErrorResponseSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized to perform this action",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: UserSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ProfileUpdateErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: AuthenticationErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    @action(
-        methods=("PUT", "PATCH"),
-        detail=False,
-        url_path="profile",
-        url_name="update-profile",
-    )
-    def update_profile(
-        self,
-        request: DRFRequest,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Updating the user Profile using this endpoint,
-        getting the result with the updaed the user profile
-        """
-
-        serializer: UserSerializer = UserSerializer(
+    @action(methods=["PUT", "PATCH"], detail=False, url_path="profile")
+    def update_profile(self, request) -> Response:
+        serializer = UserSerializer(
             request.user,
             data=request.data,
             partial=True,
@@ -324,7 +183,11 @@ class UserProfileViewSet(ViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return DRFResponse(
-            data=serializer.data,
+        return Response(
+            {
+                "success": True,
+                "message": "Profile updated successfully",
+                "data": serializer.data,
+            },
             status=HTTP_200_OK,
         )

@@ -1,16 +1,12 @@
-# Python modules
-from typing import Any, Optional
-
 # Django modules
-from django.db.models import QuerySet, Avg, Count, Q
+from django.db.models import Avg, Count, Q
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 
-# Django REST Framework
+# Django Third-party modules
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
-from rest_framework.request import Request as DRFRequest
-from rest_framework.response import Response as DRFResponse
+from rest_framework.response import Response
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
@@ -23,13 +19,11 @@ from rest_framework.status import (
 )
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
-
-# Third-party modules
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema
 
 # Project modules
-from .models import Movie, Comment, Like, Rating, Review, Favorite
-from .serializers import (
+from apps.movies.models import Movie, Comment, Like, Rating, Review, Favorite
+from apps.movies.serializers import (
     MovieSerializer,
     CommentSerializer,
     RatingSerializer,
@@ -39,172 +33,117 @@ from .serializers import (
     RatingDetailSerializer,
     FavoriteSerializer,
 )
-from .pagination import StandardResultsSetPagination
-from apps.abstracts.serializers import (
-    ErrorResponseSerializer,
-    ValidationErrorResponseSerializer,
+from apps.movies.serializers_requests import (
+    MovieSearchRequestSerializer,
+    CommentRequestSerializer,
+    RatingRequestSerializer,
+    LikeToggleRequestSerializer,
+    ReviewRequestSerializer,
+    RatingDetailRequestSerializer,
+    FavoriteRequestSerializer,
+    VideoUploadRequestSerializer,
 )
+from apps.movies.serializers_responses import (
+    MovieSuccessResponseSerializer,
+    MovieListSuccessResponseSerializer,
+    CommentSuccessResponseSerializer,
+    CommentListSuccessResponseSerializer,
+    RatingSuccessResponseSerializer,
+    ReviewSuccessResponseSerializer,
+    ReviewListSuccessResponseSerializer,
+    RatingDetailSuccessResponseSerializer,
+    RatingDetailListSuccessResponseSerializer,
+    FavoriteSuccessResponseSerializer,
+    FavoriteListSuccessResponseSerializer,
+)
+from apps.movies.pagination import StandardResultsSetPagination
+from apps.abstracts.serializers import ErrorResponseSerializer
 from apps.accounts.permissions import IsOwnerOrAdmin
 
-# Typing imports
-from django.contrib.contenttypes.models import ContentType as ContentTypeModel
-from django.db.models.base import ModelBase
-
-User: type = get_user_model()
+User = get_user_model()
 
 
 class MovieViewSet(ViewSet):
-    """
-    Docstring for MovieViewSet
-    """
+    """ViewSet for managing movies."""
 
-    permission_classes = (AllowAny,)
+    permission_classes = [AllowAny]
 
     @extend_schema(
-        summary="Get list of all movies",
-        description="Returns a list of all movies with average rating and likes count",
-        tags=["Movies"],
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="List of all movies",
-                response=MovieSerializer(many=True),
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: MovieListSuccessResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    @action(
-        methods=("GET",),
-        detail=False,
-        url_path="list",
-        url_name="movie-list",
-    )
-    def list_movies(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle GET requests to list movies.
-        """
-        movies: QuerySet[Movie] = Movie.objects.annotate(
+    @action(methods=["GET"], detail=False, url_path="list")
+    def list_movies(self, request):
+        movies = Movie.objects.annotate(
             average_rating=Avg("ratings__score"),
             likes_count=Count("likes", distinct=True),
         ).all()
 
         paginator = StandardResultsSetPagination()
         paginated_movies = paginator.paginate_queryset(movies, request)
-
-        serializer: MovieSerializer = MovieSerializer(
+        serializer = MovieSerializer(
             paginated_movies, many=True, context={"request": request}
         )
-
-        return paginator.get_paginated_response(serializer.data)
+        return paginator.get_paginated_response(serializer.data, HTTP_200_OK)
 
     @extend_schema(
-        summary="Get movie details",
-        description="Returns detailed information about a specific movie by ID",
-        tags=["Movies"],
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Movie details",
-                response=MovieSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Movie not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: MovieSuccessResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
     @action(
-        methods=("GET",),
+        methods=["GET"],
         detail=True,
         url_path="detail",
-        url_name="movie-detail",
-        permission_classes=(IsAuthenticated,),
+        permission_classes=[IsAuthenticated],
     )
-    def retrieve_movie(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handle GET requests to retrieve a specific movie by ID.
-        """
-
+    def retrieve_movie(self, request, pk=None):
         try:
-            movie: Movie = Movie.objects.annotate(
+            movie = Movie.objects.annotate(
                 average_rating=Avg("ratings__score"),
                 likes_count=Count("likes", distinct=True),
             ).get(id=pk)
         except Movie.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Movie not found"},
+            return Response(
+                {"success": False, "message": "Movie not found"},
                 status=HTTP_404_NOT_FOUND,
             )
 
-        serializer: MovieSerializer = MovieSerializer(
-            movie, context={"request": request}
-        )
-        return DRFResponse(
-            data=serializer.data,
+        serializer = MovieSerializer(movie, context={"request": request})
+        return Response(
+            {"success": True, "data": serializer.data},
             status=HTTP_200_OK,
         )
 
     @extend_schema(
-        summary="Search movies",
-        description="searching the movie with different filters",
-        tags=["Movies"],
+        request=MovieSearchRequestSerializer,
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Search results", response=MovieSearchSerializer(many=True)
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: MovieListSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
     @action(
-        methods=("GET",),
+        methods=["GET"],
         detail=False,
         url_path="search",
-        url_name="movie-search",
+        permission_classes=[IsAuthenticated],
     )
-    def search_movies(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle GET requests to search movies.
-        """
-        search_serializer: MovieSearchSerializer = MovieSearchSerializer(
-            data=request.query_params
-        )
-
-        if not search_serializer.is_valid():
-            return DRFResponse(
-                data=search_serializer.errors,
+    def search_movies(self, request):
+        serializer = MovieSearchSerializer(data=request.query_params)
+        if not serializer.is_valid():
+            return Response(
+                {"success": False, "errors": serializer.errors},
                 status=HTTP_400_BAD_REQUEST,
             )
-        validated_data = search_serializer.validated_data
+
+        validated_data = serializer.validated_data
         query = validated_data.get("query", "").strip()
         genre = validated_data.get("genre", "").strip()
         year_from = validated_data.get("year_from")
@@ -217,13 +156,10 @@ class MovieViewSet(ViewSet):
             movies = movies.filter(
                 Q(title__icontains=query) | Q(description__icontains=query)
             )
-
         if genre:
             movies = movies.filter(genre__iexact=genre)
-
         if year_from:
             movies = movies.filter(year__gte=year_from)
-
         if year_to:
             movies = movies.filter(year__lte=year_to)
 
@@ -231,128 +167,73 @@ class MovieViewSet(ViewSet):
             ordering = ordering.replace("average_rating", "avg_rating")
 
         movies = movies.order_by(ordering)[:100]
-
         paginator = StandardResultsSetPagination()
-
         paginated_movies = paginator.paginate_queryset(movies, request)
-
-        seralizer = MovieSerializer(
-            paginated_movies,
-            many=True,
-            context={"request": request},
+        serializer = MovieSerializer(
+            paginated_movies, many=True, context={"request": request}
         )
-        return paginator.get_paginated_response(seralizer.data)
+        return paginator.get_paginated_response(serializer.data, HTTP_200_OK)
 
     @extend_schema(
-        summary="Upload/replace movie video",
-        description="Uploads or replace the video file of the given movie",
-        tags=["Movies"],
-        request=MovieVideoUploadSerializer,
+        request=VideoUploadRequestSerializer,
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Video uploaded sucessfully",
-                response=MovieSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ValidationErrorResponseSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Movie not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_201_CREATED: MovieSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
     @action(
-        methods=("PUT", "POST"),
+        methods=["PUT", "POST"],
         detail=True,
         url_path="video",
-        url_name="upload-video",
-        permission_classes=(IsAdminUser,),
-        parser_classes=(MultiPartParser, FormParser),
+        permission_classes=[IsAdminUser],
+        parser_classes=[MultiPartParser, FormParser],
     )
-    def upload_video(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handling the PUT/POST requests to upload movie video
-        """
+    def upload_video(self, request, pk=None):
         try:
-            movie: Movie = Movie.objects.get(id=pk)
+            movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Movie not found"},
+            return Response(
+                {"success": False, "message": "Movie not found"},
                 status=HTTP_404_NOT_FOUND,
             )
 
         serializer = MovieVideoUploadSerializer(movie, data=request.data, partial=True)
         if not serializer.is_valid():
-            return DRFResponse(data=serializer.errors, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"success": False, "errors": serializer.errors},
+                status=HTTP_400_BAD_REQUEST,
+            )
         serializer.save()
 
-        return DRFResponse(
-            data=MovieSerializer(movie, context={"request": request}).data,
-            status=HTTP_200_OK,
+        return Response(
+            {
+                "success": True,
+                "message": "Video uploaded successfully",
+                "data": MovieSerializer(movie, context={"request": request}).data,
+            },
+            status=HTTP_201_CREATED,
         )
 
     @extend_schema(
-        summary="Get movie comments",
-        description="Returns a list of all comments for a movie includes replies",
-        tags=["Comments"],
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="List of all comments",
-                response=CommentSerializer(many=True),
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: CommentListSuccessResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
     @action(
-        methods=("GET",),
+        methods=["GET"],
         detail=True,
         url_path="comments",
-        url_name="movie-comments",
-        permission_classes=(IsAuthenticated,),
+        permission_classes=[IsAuthenticated],
     )
-    def get_comments(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handles get requests to retrieve movie comments for a specific movie
-        """
-
-        comments: QuerySet[Comment] = (
+    def get_comments(self, request, pk=None):
+        comments = (
             Comment.objects.filter(movie_id=pk, parent=None)
             .select_related("user", "movie")
             .prefetch_related("replies__user")
@@ -361,235 +242,145 @@ class MovieViewSet(ViewSet):
 
         paginator = StandardResultsSetPagination()
         paginated_comments = paginator.paginate_queryset(comments, request)
-
-        serializer: CommentSerializer = CommentSerializer(
+        serializer = CommentSerializer(
             paginated_comments, many=True, context={"request": request}
         )
-        return paginator.get_paginated_response(serializer.data)
+        return paginator.get_paginated_response(serializer.data, HTTP_200_OK)
 
     @extend_schema(
-        summary="Create  movie comment",
-        description="Creates a new comment for a movie ",
-        tags=["Comments"],
-        request=CommentSerializer,
+        request=CommentRequestSerializer,
         responses={
-            HTTP_201_CREATED: OpenApiResponse(
-                description="Comment created",
-                response=CommentSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request", response=ValidationErrorResponseSerializer
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Movie not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_201_CREATED: CommentSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
     @action(
-        methods=("POST",),
+        methods=["POST"],
         detail=True,
         url_path="comments",
-        url_name="create-comment",
-        permission_classes=(IsAuthenticated,),
+        permission_classes=[IsAuthenticated],
     )
-    def create_comment(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handling POST requests to create a new comment for a specific movie
-        """
+    def create_comment(self, request, pk=None):
         try:
-            movie: Movie = Movie.objects.get(id=pk)
+            movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Movie not found"},
+            return Response(
+                {"success": False, "message": "Movie not found"},
                 status=HTTP_404_NOT_FOUND,
             )
-        serializer: CommentSerializer = CommentSerializer(data=request.data)
 
+        serializer = CommentSerializer(data=request.data)
         if not serializer.is_valid():
-            return DRFResponse(
-                data=serializer.errors,
+            return Response(
+                {"success": False, "errors": serializer.errors},
                 status=HTTP_400_BAD_REQUEST,
             )
+
         serializer.save(user=request.user, movie=movie)
-        return DRFResponse(
-            data=serializer.data,
+        return Response(
+            {
+                "success": True,
+                "message": "Comment created successfully",
+                "data": serializer.data,
+            },
             status=HTTP_201_CREATED,
         )
 
     @extend_schema(
-        summary="Rate a movie",
-        description="Rates a movie (score from 1 to 5) or updates an existing rating",
-        tags=["Ratings"],
+        request=RatingRequestSerializer,
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Rating sucessful",
-                response=RatingSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ValidationErrorResponseSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Movie not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_201_CREATED: RatingSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
     @action(
-        methods=("POST",),
+        methods=["POST"],
         detail=True,
         url_path="rate",
-        url_name="rate-movie",
-        permission_classes=(IsAuthenticated,),
+        permission_classes=[IsAuthenticated],
     )
-    def rate_movie(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handling POST requests to rate a specific movie
-        """
+    def rate_movie(self, request, pk=None):
         try:
-            movie: Movie = Movie.objects.get(id=pk)
+            movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Movie not found"},
+            return Response(
+                {"success": False, "message": "Movie not found"},
                 status=HTTP_404_NOT_FOUND,
             )
 
-        score: Optional[int] = request.data.get("score")
-
+        score = request.data.get("score")
         if score is None or not (1 <= int(score) <= 5):
-            return DRFResponse(
-                data={"detail": "Score must be between 1 and 5"},
+            return Response(
+                {"success": False, "message": "Score must be between 1 and 5"},
                 status=HTTP_400_BAD_REQUEST,
             )
+
         rating, _ = Rating.objects.update_or_create(
             user=request.user, movie=movie, defaults={"score": score}
         )
-        serializer: RatingSerializer = RatingSerializer(rating)
-
-        return DRFResponse(
-            data=serializer.data,
+        serializer = RatingSerializer(rating)
+        return Response(
+            {
+                "success": True,
+                "message": "Rating saved successfully",
+                "data": serializer.data,
+            },
             status=HTTP_200_OK,
         )
 
 
 class LikeViewSet(ViewSet):
-    """
-    ViewSet for handling Like-related endpoints.
-    """
-
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Like/Unlike object",
-        description="Likes or unlikes an object (movie or comment)",
-        tags=["Likes"],
+        request=LikeToggleRequestSerializer,
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Unliked successfully",
-            ),
-            HTTP_201_CREATED: OpenApiResponse(
-                description="Liked successfully",
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Object not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: ErrorResponseSerializer,
+            HTTP_201_CREATED: ErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    @action(
-        methods=("POST",),
-        detail=False,
-        url_path="toggle",
-        url_name="toggle-like",
-    )
-    def toggle_like(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle POST requests to like or unlike an object.
-        """
-        content_type_str: Optional[str] = request.data.get("content_type")
-        object_id: Optional[int] = request.data.get("object_id")
+    @action(methods=["POST"], detail=False, url_path="toggle")
+    def toggle_like(self, request):
+        content_type_str = request.data.get("content_type")
+        object_id = request.data.get("object_id")
 
         if not content_type_str or not object_id:
-            return DRFResponse(
-                data={"detail": "content_type and object_id are required."},
+            return Response(
+                {
+                    "success": False,
+                    "message": "content_type and object_id are required",
+                },
                 status=HTTP_400_BAD_REQUEST,
             )
 
         try:
-            ct: ContentTypeModel = ContentType.objects.get(model=content_type_str)
+            ct = ContentType.objects.get(model=content_type_str)
         except ContentType.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Invalid content_type."}, status=HTTP_400_BAD_REQUEST
+            return Response(
+                {"success": False, "message": "Invalid content_type"},
+                status=HTTP_400_BAD_REQUEST,
             )
 
-        obj_model: type[ModelBase] = ct.model_class()
-
+        obj_model = ct.model_class()
         try:
             obj_model.objects.get(id=object_id)
         except obj_model.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Object not found."}, status=HTTP_404_NOT_FOUND
+            return Response(
+                {"success": False, "message": "Object not found"},
+                status=HTTP_404_NOT_FOUND,
             )
 
-        user: User = request.user
-
-        existing_like: Optional[Like] = Like.objects.filter(
-            user=user, content_type=ct, object_id=object_id
+        existing_like = Like.objects.filter(
+            user=request.user, content_type=ct, object_id=object_id
         ).first()
 
         if existing_like:
@@ -597,465 +388,262 @@ class LikeViewSet(ViewSet):
             likes_count = Like.objects.filter(
                 content_type=ct, object_id=object_id
             ).count()
-
-            return DRFResponse(
-                data={"liked": False, "likes_count": likes_count}, status=HTTP_200_OK
+            return Response(
+                {"success": True, "liked": False, "likes_count": likes_count},
+                status=HTTP_200_OK,
             )
 
-        soft_deleted_like: Optional[Like] = Like.all_objects.filter(
-            user=user, content_type=ct, object_id=object_id, deleted_at__isnull=False
+        soft_deleted_like = Like.all_objects.filter(
+            user=request.user,
+            content_type=ct,
+            object_id=object_id,
+            deleted_at__isnull=False,
         ).first()
 
         if soft_deleted_like:
             soft_deleted_like.deleted_at = None
             soft_deleted_like.save(update_fields=["deleted_at"])
         else:
-            Like.objects.create(user=user, content_type=ct, object_id=object_id)
+            Like.objects.create(user=request.user, content_type=ct, object_id=object_id)
 
         likes_count = Like.objects.filter(content_type=ct, object_id=object_id).count()
-
-        return DRFResponse(
-            data={"liked": True, "likes_count": likes_count}, status=HTTP_201_CREATED
+        return Response(
+            {"success": True, "liked": True, "likes_count": likes_count},
+            status=HTTP_201_CREATED,
         )
 
 
 class ReviewViewSet(ViewSet):
-    """
-    ViewSet for handling Review-related endpoints.
-    """
-
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Get list of all reviews",
-        description="Returns a list of all reviews (optionally filtered by movie_id)",
-        tags=["Reviews"],
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="List of reviews",
-                response=ReviewSerializer(many=True),
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: ReviewListSuccessResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def list(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle GET requests to list reviews.
-        """
+    def list(self, request):
         movie_id = request.query_params.get("movie_id")
-
         if movie_id:
             reviews = Review.objects.filter(movie_id=movie_id)
         else:
             reviews = Review.objects.all()
 
         reviews = reviews.select_related("user", "movie").order_by("-created_at")
-
         paginator = StandardResultsSetPagination()
         paginated_reviews = paginator.paginate_queryset(reviews, request)
-
         serializer = ReviewSerializer(paginated_reviews, many=True)
-
         return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
-        summary="Create a new review",
-        description="Creates a new review for a movie",
-        tags=["Reviews"],
-        request=ReviewSerializer,
+        request=ReviewRequestSerializer,
         responses={
-            HTTP_201_CREATED: OpenApiResponse(
-                description="Review created",
-                response=ReviewSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_201_CREATED: ReviewSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def create(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle POST requests to create a new review.
-        """
+    def create(self, request):
         serializer = ReviewSerializer(data=request.data, context={"request": request})
-
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user)
-
-        return DRFResponse(data=serializer.data, status=HTTP_201_CREATED)
+        return Response(
+            {
+                "success": True,
+                "message": "Review created successfully",
+                "data": serializer.data,
+            },
+            status=HTTP_201_CREATED,
+        )
 
     @extend_schema(
-        summary="Get review details",
-        description="Returns detailed information about a review by ID",
-        tags=["Reviews"],
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Review details",
-                response=ReviewSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Review not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: ReviewSuccessResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def retrieve(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handle GET requests to retrieve a specific review.
-        """
+    def retrieve(self, request, pk=None):
         try:
             review = Review.objects.select_related("user", "movie").get(id=pk)
         except Review.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Review not found."}, status=HTTP_404_NOT_FOUND
+            return Response(
+                {"success": False, "message": "Review not found"},
+                status=HTTP_404_NOT_FOUND,
             )
 
         serializer = ReviewSerializer(review)
-
-        return DRFResponse(data=serializer.data, status=HTTP_200_OK)
+        return Response(
+            {"success": True, "data": serializer.data},
+            status=HTTP_200_OK,
+        )
 
     @extend_schema(
-        summary="Update a review",
-        description="Updates an existing review (owner only)",
-        tags=["Reviews"],
-        request=ReviewSerializer,
+        request=ReviewRequestSerializer,
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Review updated",
-                response=ReviewSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Review not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: ReviewSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def partial_update(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handle PATCH requests to partially update a review.
-        """
+    def partial_update(self, request, pk=None):
         try:
             review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Review not found."}, status=HTTP_404_NOT_FOUND
+            return Response(
+                {"success": False, "message": "Review not found"},
+                status=HTTP_404_NOT_FOUND,
             )
 
         if not IsOwnerOrAdmin().has_object_permission(request, self, review):
-            return DRFResponse(
-                data={"detail": "You do not have permission to update this review."},
+            return Response(
+                {
+                    "success": False,
+                    "message": "You do not have permission to update this review",
+                },
                 status=HTTP_403_FORBIDDEN,
             )
 
         serializer = ReviewSerializer(review, data=request.data, partial=True)
-
         serializer.is_valid(raise_exception=True)
         serializer.save()
-
-        return DRFResponse(data=serializer.data, status=HTTP_200_OK)
+        return Response(
+            {
+                "success": True,
+                "message": "Review updated successfully",
+                "data": serializer.data,
+            },
+            status=HTTP_200_OK,
+        )
 
     @extend_schema(
-        summary="Delete a review",
-        description="Deletes a review (owner only)",
-        tags=["Reviews"],
         responses={
-            HTTP_204_NO_CONTENT: OpenApiResponse(
-                description="Review deleted",
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Review not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_204_NO_CONTENT: None,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def destroy(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handle DELETE requests to delete a review.
-        """
+    def destroy(self, request, pk=None):
         try:
             review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Review not found."}, status=HTTP_404_NOT_FOUND
+            return Response(
+                {"success": False, "message": "Review not found"},
+                status=HTTP_404_NOT_FOUND,
             )
 
         if not IsOwnerOrAdmin().has_object_permission(request, self, review):
-            return DRFResponse(
-                data={"detail": "You do not have permission to delete this review."},
+            return Response(
+                {
+                    "success": False,
+                    "message": "You do not have permission to delete this review",
+                },
                 status=HTTP_403_FORBIDDEN,
             )
 
         review.delete()
-
-        return DRFResponse(status=HTTP_204_NO_CONTENT)
+        return Response(status=HTTP_204_NO_CONTENT)
 
 
 class RatingViewSet(ViewSet):
-    """
-    ViewSet for handling Rating-related endpoints.
-    """
-
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Get list of all ratings",
-        description="Returns a list of all ratings (optionally filtered by movie_id)",
-        tags=["Ratings"],
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="List of ratings",
-                response=RatingDetailSerializer(many=True),
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: RatingDetailListSuccessResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def list(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle GET requests to list ratings.
-        """
+    def list(self, request):
         movie_id = request.query_params.get("movie_id")
-
         if movie_id:
             ratings = Rating.objects.filter(movie_id=movie_id)
         else:
             ratings = Rating.objects.all()
 
         serializer = RatingDetailSerializer(ratings, many=True)
-
-        return DRFResponse(data=serializer.data, status=HTTP_200_OK)
+        return Response(
+            {"success": True, "data": serializer.data},
+            status=HTTP_200_OK,
+        )
 
     @extend_schema(
-        summary="Rate a movie (create or update)",
-        description="Creates or updates a movie rating",
-        tags=["Ratings"],
-        request=RatingDetailSerializer,
+        request=RatingDetailRequestSerializer,
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="Rating successful",
-                response=RatingDetailSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: RatingDetailSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def create(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle POST requests to create or update a rating.
-        """
+    def create(self, request):
         serializer = RatingDetailSerializer(
             data=request.data, context={"request": request}
         )
-
         serializer.is_valid(raise_exception=True)
         serializer.save()
-
-        return DRFResponse(data=serializer.data, status=HTTP_200_OK)
+        return Response(
+            {
+                "success": True,
+                "message": "Rating saved successfully",
+                "data": serializer.data,
+            },
+            status=HTTP_200_OK,
+        )
 
     @extend_schema(
-        summary="Delete a rating",
-        description="Deletes a movie rating (owner only)",
-        tags=["Ratings"],
         responses={
-            HTTP_204_NO_CONTENT: OpenApiResponse(
-                description="Rating deleted",
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Rating not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_204_NO_CONTENT: None,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def destroy(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handle DELETE requests to delete a rating.
-        """
+    def destroy(self, request, pk=None):
         try:
             rating = Rating.objects.get(id=pk)
         except Rating.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Rating not found."}, status=HTTP_404_NOT_FOUND
+            return Response(
+                {"success": False, "message": "Rating not found"},
+                status=HTTP_404_NOT_FOUND,
             )
 
         if not IsOwnerOrAdmin().has_object_permission(request, self, rating):
-            return DRFResponse(
-                data={"detail": "You do not have permission to delete this rating."},
+            return Response(
+                {
+                    "success": False,
+                    "message": "You do not have permission to delete this rating",
+                },
                 status=HTTP_403_FORBIDDEN,
             )
 
         rating.delete()
-
-        return DRFResponse(status=HTTP_204_NO_CONTENT)
+        return Response(status=HTTP_204_NO_CONTENT)
 
 
 class FavoriteViewSet(ViewSet):
-    """
-    ViewSet for handling Favorite-related endpoints.
-    """
-
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Get list of favorite movies",
-        description="Returns a list of favorite movies for the current user",
-        tags=["Favorites"],
         responses={
-            HTTP_200_OK: OpenApiResponse(
-                description="List of favorites",
-                response=FavoriteSerializer(many=True),
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_200_OK: FavoriteListSuccessResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def list(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle GET requests to list favorite movies.
-        """
+    def list(self, request):
         favorites = (
             Favorite.objects.filter(user=request.user)
             .select_related("movie")
@@ -1064,110 +652,70 @@ class FavoriteViewSet(ViewSet):
 
         paginator = StandardResultsSetPagination()
         paginated_favorites = paginator.paginate_queryset(favorites, request)
-
         serializer = FavoriteSerializer(paginated_favorites, many=True)
-
         return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
-        summary="Add movie to favorites",
-        description="Adds a movie to the current user's favorites list",
-        tags=["Favorites"],
-        request=FavoriteSerializer,
+        request=FavoriteRequestSerializer,
         responses={
-            HTTP_201_CREATED: OpenApiResponse(
-                description="Favorite added",
-                response=FavoriteSerializer,
-            ),
-            HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Bad request",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_201_CREATED: FavoriteSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def create(
-        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
-    ) -> DRFResponse:
-        """
-        Handle POST requests to add a movie to favorites.
-        """
+    def create(self, request):
         serializer = FavoriteSerializer(data=request.data)
-
         if not serializer.is_valid():
-            return DRFResponse(data=serializer.errors, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"success": False, "errors": serializer.errors},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
         movie_id = serializer.validated_data.get("movie_id")
         if Favorite.objects.filter(user=request.user, movie_id=movie_id).exists():
-            return DRFResponse(
-                data={"detail": "Movie already in favorites."},
+            return Response(
+                {"success": False, "message": "Movie already in favorites"},
                 status=HTTP_400_BAD_REQUEST,
             )
 
         serializer.save(user=request.user)
-
-        return DRFResponse(data=serializer.data, status=HTTP_201_CREATED)
+        return Response(
+            {
+                "success": True,
+                "message": "Movie added to favorites",
+                "data": serializer.data,
+            },
+            status=HTTP_201_CREATED,
+        )
 
     @extend_schema(
-        summary="Remove movie from favorites",
-        description="Removes a movie from the current user's favorites list",
-        tags=["Favorites"],
         responses={
-            HTTP_204_NO_CONTENT: OpenApiResponse(
-                description="Favorite removed",
-            ),
-            HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Unauthorized",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_403_FORBIDDEN: OpenApiResponse(
-                description="Permission denied",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Favorite not found",
-                response=ErrorResponseSerializer,
-            ),
-            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
-                description="Method not allowed",
-                response=ErrorResponseSerializer,
-            ),
+            HTTP_204_NO_CONTENT: None,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
-    def destroy(
-        self,
-        request: DRFRequest,
-        pk: int = None,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
-    ) -> DRFResponse:
-        """
-        Handle DELETE requests to remove a movie from favorites.
-        """
+    def destroy(self, request, pk=None):
         try:
             favorite = Favorite.objects.get(id=pk)
         except Favorite.DoesNotExist:
-            return DRFResponse(
-                data={"detail": "Favorite not found."}, status=HTTP_404_NOT_FOUND
+            return Response(
+                {"success": False, "message": "Favorite not found"},
+                status=HTTP_404_NOT_FOUND,
             )
 
         if not IsOwnerOrAdmin().has_object_permission(request, self, favorite):
-            return DRFResponse(
-                data={"detail": "You do not have permission to remove this favorite."},
+            return Response(
+                {
+                    "success": False,
+                    "message": "You do not have permission to remove this favorite",
+                },
                 status=HTTP_403_FORBIDDEN,
             )
 
         favorite.delete()
-
-        return DRFResponse(status=HTTP_204_NO_CONTENT)
+        return Response(status=HTTP_204_NO_CONTENT)

@@ -11,12 +11,8 @@ class AbstractBaseModel(Model):
     Abstract base model with common fields.
     """
 
-    created_at = DateTimeField(
-        auto_now_add=True
-    )
-    updated_at = DateTimeField(
-        auto_now=True
-    )
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
     deleted_at = DateTimeField(
         null=True,
         blank=True,

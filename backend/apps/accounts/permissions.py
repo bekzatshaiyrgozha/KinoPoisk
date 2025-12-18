@@ -1,4 +1,4 @@
-# Django REST Framework
+# Django Third-party modules
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 

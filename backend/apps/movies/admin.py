@@ -8,6 +8,8 @@ from .models import Movie, Comment, Rating, Like, Review, Favorite
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
+    """Admin interface for Review model."""
+
     list_display = ["id", "user", "movie", "title", "rating", "created_at"]
     list_filter = ["rating", "created_at"]
     search_fields = ["title", "text", "user__username", "movie__title"]
@@ -15,6 +17,8 @@ class ReviewAdmin(admin.ModelAdmin):
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
+    """Admin interface for Favorite model."""
+
     list_display = ["id", "user", "movie", "created_at"]
     list_filter = ["created_at"]
     search_fields = ["user__username", "movie__title"]

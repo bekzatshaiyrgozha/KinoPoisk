@@ -10,10 +10,7 @@ from .views import (
     FavoriteViewSet,
 )
 
-app_name = "movies"
-
 urlpatterns = [
-    # Movie endpoints
     path(
         route="", view=MovieViewSet.as_view({"get": "list_movies"}), name="movie-list"
     ),
@@ -42,13 +39,11 @@ urlpatterns = [
         view=MovieViewSet.as_view({"post": "rate_movie"}),
         name="movie-rate",
     ),
-    # Like endpoints
     path(
         route="like/",
         view=LikeViewSet.as_view({"post": "toggle_like"}),
         name="like-toggle",
     ),
-    # Review endpoints
     path(
         route="reviews/",
         view=ReviewViewSet.as_view({"get": "list", "post": "create"}),
@@ -61,7 +56,6 @@ urlpatterns = [
         ),
         name="review-detail",
     ),
-    # Rating endpoints
     path(
         route="ratings/",
         view=RatingViewSet.as_view({"get": "list", "post": "create"}),
@@ -72,7 +66,6 @@ urlpatterns = [
         view=RatingViewSet.as_view({"delete": "destroy"}),
         name="rating-delete",
     ),
-    # Favorite endpoints
     path(
         route="favorites/",
         view=FavoriteViewSet.as_view({"get": "list", "post": "create"}),

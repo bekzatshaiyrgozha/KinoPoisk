@@ -5,6 +5,8 @@ from .models import CustomUser
 
 @admin.register(CustomUser)
 class CustomUserAdmin(BaseUserAdmin):
+    """Admin interface for CustomUser model"""
+
     list_display = [
         "email",
         "username",

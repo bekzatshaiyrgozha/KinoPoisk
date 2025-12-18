@@ -132,6 +132,7 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
@@ -141,10 +142,7 @@ REST_FRAMEWORK = {
         "anon": "100/day",
         "user": "1000/day",
     },
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
-    ],
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
 }
 
 """

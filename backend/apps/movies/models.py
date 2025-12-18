@@ -80,7 +80,6 @@ class Movie(AbstractBaseModel):
 
     @average_rating.setter
     def average_rating(self, value):
-        # Allow annotate(...) to set this value without error
         self._average_rating_cache = value
 
     @property
@@ -92,7 +91,6 @@ class Movie(AbstractBaseModel):
 
     @likes_count.setter
     def likes_count(self, value):
-        # Allow annotate(...) to set this value without error
         self._likes_count_cache = value
 
 
@@ -139,7 +137,6 @@ class Comment(AbstractBaseModel):
 
     @likes_count.setter
     def likes_count(self, value):
-        # Allow annotate(...) to set this value without error
         self._likes_count_cache = value
 
 

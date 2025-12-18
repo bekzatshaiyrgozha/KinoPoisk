@@ -7,6 +7,14 @@ from apps.accounts.managers import CustomUserManager
 class CustomUser(AbstractUser, AbstractBaseModel):
     """
     Custom User Model
+    Fields:
+        - email: Unique email address for the user
+        - bio: Optional biography of the user
+    Methods:
+        - __str__: String representation of the user
+        - __repr__: Official representation of the user
+        - full_name: Returns the full name of the user
+        - short_name: Returns the short name of the user
     """
 
     email = models.EmailField(

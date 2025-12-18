@@ -6,17 +6,18 @@ from datetime import datetime
 # Django modules
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-
-User = get_user_model()
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
+from django.contrib.contenttypes.models import ContentType
 
 # Third-party modules
 from faker import Faker
 
 # Project modules
 from apps.movies.models import Movie, Comment, Rating, Like, Review, Favorite
-from django.contrib.contenttypes.models import ContentType
+
+
+User = get_user_model()
 
 
 fake = Faker()
