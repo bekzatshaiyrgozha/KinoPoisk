@@ -531,8 +531,20 @@ class LikeViewSet(ViewSet):
                 description="Bad request",
                 response=ErrorResponseSerializer,
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
             HTTP_404_NOT_FOUND: OpenApiResponse(
                 description="Object not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -623,6 +635,18 @@ class ReviewViewSet(ViewSet):
                 description="List of reviews",
                 response=ReviewSerializer(many=True),
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
         },
     )
     def list(
@@ -661,6 +685,18 @@ class ReviewViewSet(ViewSet):
                 description="Bad request",
                 response=ErrorResponseSerializer,
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
         },
     )
     def create(
@@ -685,8 +721,20 @@ class ReviewViewSet(ViewSet):
                 description="Review details",
                 response=ReviewSerializer,
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
             HTTP_404_NOT_FOUND: OpenApiResponse(
                 description="Review not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -726,12 +774,20 @@ class ReviewViewSet(ViewSet):
                 description="Bad request",
                 response=ErrorResponseSerializer,
             ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Review not found",
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
                 response=ErrorResponseSerializer,
             ),
             HTTP_403_FORBIDDEN: OpenApiResponse(
                 description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Review not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -774,12 +830,20 @@ class ReviewViewSet(ViewSet):
             HTTP_204_NO_CONTENT: OpenApiResponse(
                 description="Review deleted",
             ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Review not found",
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
                 response=ErrorResponseSerializer,
             ),
             HTTP_403_FORBIDDEN: OpenApiResponse(
                 description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Review not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -828,6 +892,18 @@ class RatingViewSet(ViewSet):
                 description="List of ratings",
                 response=RatingDetailSerializer(many=True),
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
         },
     )
     def list(
@@ -861,6 +937,18 @@ class RatingViewSet(ViewSet):
                 description="Bad request",
                 response=ErrorResponseSerializer,
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
         },
     )
     def create(
@@ -886,12 +974,20 @@ class RatingViewSet(ViewSet):
             HTTP_204_NO_CONTENT: OpenApiResponse(
                 description="Rating deleted",
             ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Rating not found",
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
                 response=ErrorResponseSerializer,
             ),
             HTTP_403_FORBIDDEN: OpenApiResponse(
                 description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Rating not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -940,6 +1036,18 @@ class FavoriteViewSet(ViewSet):
                 description="List of favorites",
                 response=FavoriteSerializer(many=True),
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
         },
     )
     def list(
@@ -975,6 +1083,18 @@ class FavoriteViewSet(ViewSet):
                 description="Bad request",
                 response=ErrorResponseSerializer,
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
         },
     )
     def create(
@@ -1007,12 +1127,20 @@ class FavoriteViewSet(ViewSet):
             HTTP_204_NO_CONTENT: OpenApiResponse(
                 description="Favorite removed",
             ),
-            HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="Favorite not found",
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
                 response=ErrorResponseSerializer,
             ),
             HTTP_403_FORBIDDEN: OpenApiResponse(
                 description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Favorite not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
