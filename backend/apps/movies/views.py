@@ -312,24 +312,10 @@ class MovieViewSet(ViewSet):
         permission_classes=[IsAuthenticated],
     )
     def rate_movie(self, request, pk=None):
-        score: int | None = request.data.get("score")
-        if score is None:
+        request_serializer = RatingRequestSerializer(data=request.data)
+        if not request_serializer.is_valid():
             return Response(
-                {"success": False, "message": "Score is required"},
-                status=HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            score = int(score)
-        except (ValueError, TypeError):
-            return Response(
-                {"success": False, "message": "Score must be a number"},
-                status=HTTP_400_BAD_REQUEST,
-            )
-
-        if not (1 <= score <= 5):
-            return Response(
-                {"success": False, "message": "Score must be between 1 and 5"},
+                {"success": False, "errors": request_serializer.errors},
                 status=HTTP_400_BAD_REQUEST,
             )
 
@@ -341,6 +327,7 @@ class MovieViewSet(ViewSet):
                 status=HTTP_404_NOT_FOUND,
             )
 
+        score = request_serializer.validated_data["score"]
         rating, _ = Rating.objects.update_or_create(
             user=request.user, movie=movie, defaults={"score": score}
         )
