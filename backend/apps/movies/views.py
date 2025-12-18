@@ -85,23 +85,31 @@ class MovieViewSet(ViewSet):
         methods=["GET"], detail=False, url_path="list", permission_classes=[AllowAny]
     )
     def list_movies(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        if request.user.is_authenticated:
+            prefetch_likes = Prefetch(
+                "likes",
+                queryset=Like.objects.filter(user=request.user),
+                to_attr="user_likes",
+            )
+            prefetch_ratings = Prefetch(
+                "ratings",
+                queryset=Rating.objects.filter(user=request.user),
+                to_attr="user_ratings",
+            )
+        else:
+            prefetch_likes = Prefetch(
+                "likes", queryset=Like.objects.none(), to_attr="user_likes"
+            )
+            prefetch_ratings = Prefetch(
+                "ratings", queryset=Rating.objects.none(), to_attr="user_ratings"
+            )
+
         movies = (
             Movie.objects.annotate(
                 average_rating=Avg("ratings__score"),
                 likes_count=Count("likes", distinct=True),
             )
-            .prefetch_related(
-                Prefetch(
-                    "likes",
-                    queryset=Like.objects.filter(user=request.user),
-                    to_attr="user_likes",
-                ),
-                Prefetch(
-                    "ratings",
-                    queryset=Rating.objects.filter(user=request.user),
-                    to_attr="user_ratings",
-                ),
-            )
+            .prefetch_related(prefetch_likes, prefetch_ratings)
             .all()
         )
 
@@ -130,24 +138,32 @@ class MovieViewSet(ViewSet):
     def retrieve_movie(
         self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
     ) -> Response:
+        if request.user.is_authenticated:
+            prefetch_likes = Prefetch(
+                "likes",
+                queryset=Like.objects.filter(user=request.user),
+                to_attr="user_likes",
+            )
+            prefetch_ratings = Prefetch(
+                "ratings",
+                queryset=Rating.objects.filter(user=request.user),
+                to_attr="user_ratings",
+            )
+        else:
+            prefetch_likes = Prefetch(
+                "likes", queryset=Like.objects.none(), to_attr="user_likes"
+            )
+            prefetch_ratings = Prefetch(
+                "ratings", queryset=Rating.objects.none(), to_attr="user_ratings"
+            )
+
         try:
             movie = (
                 Movie.objects.annotate(
                     average_rating=Avg("ratings__score"),
                     likes_count=Count("likes", distinct=True),
                 )
-                .prefetch_related(
-                    Prefetch(
-                        "likes",
-                        queryset=Like.objects.filter(user=request.user),
-                        to_attr="user_likes",
-                    ),
-                    Prefetch(
-                        "ratings",
-                        queryset=Rating.objects.filter(user=request.user),
-                        to_attr="user_ratings",
-                    ),
-                )
+                .prefetch_related(prefetch_likes, prefetch_ratings)
                 .get(id=pk)
             )
         except Movie.DoesNotExist:
@@ -185,20 +201,28 @@ class MovieViewSet(ViewSet):
         year_to = validated_data.get("year_to")
         ordering = validated_data.get("ordering", "-created_at")
 
-        movies = Movie.objects.annotate(
-            avg_rating=Avg("ratings__score")
-        ).prefetch_related(
-            Prefetch(
+        if request.user.is_authenticated:
+            prefetch_likes = Prefetch(
                 "likes",
                 queryset=Like.objects.filter(user=request.user),
                 to_attr="user_likes",
-            ),
-            Prefetch(
+            )
+            prefetch_ratings = Prefetch(
                 "ratings",
                 queryset=Rating.objects.filter(user=request.user),
                 to_attr="user_ratings",
-            ),
-        )
+            )
+        else:
+            prefetch_likes = Prefetch(
+                "likes", queryset=Like.objects.none(), to_attr="user_likes"
+            )
+            prefetch_ratings = Prefetch(
+                "ratings", queryset=Rating.objects.none(), to_attr="user_ratings"
+            )
+
+        movies = Movie.objects.annotate(
+            avg_rating=Avg("ratings__score")
+        ).prefetch_related(prefetch_likes, prefetch_ratings)
 
         if query:
             movies = movies.filter(
@@ -278,21 +302,34 @@ class MovieViewSet(ViewSet):
     def get_comments(
         self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
     ) -> Response:
+        if request.user.is_authenticated:
+            prefetch_likes = Prefetch(
+                "likes",
+                queryset=Like.objects.filter(user=request.user),
+                to_attr="user_likes",
+            )
+            prefetch_replies_likes = Prefetch(
+                "replies__likes",
+                queryset=Like.objects.filter(user=request.user),
+                to_attr="replies_user_likes",
+            )
+        else:
+            prefetch_likes = Prefetch(
+                "likes", queryset=Like.objects.none(), to_attr="user_likes"
+            )
+            prefetch_replies_likes = Prefetch(
+                "replies__likes",
+                queryset=Like.objects.none(),
+                to_attr="replies_user_likes",
+            )
+
         comments = (
             Comment.objects.filter(movie_id=pk, parent=None)
             .select_related("user", "movie")
             .prefetch_related(
                 "replies__user",
-                Prefetch(
-                    "likes",
-                    queryset=Like.objects.filter(user=request.user),
-                    to_attr="user_likes",
-                ),
-                Prefetch(
-                    "replies__likes",
-                    queryset=Like.objects.filter(user=request.user),
-                    to_attr="replies_user_likes",
-                ),
+                prefetch_likes,
+                prefetch_replies_likes,
             )
             .annotate(likes_count=Count("likes", distinct=True))
         )
