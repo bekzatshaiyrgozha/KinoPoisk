@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { authService } from '@/services';
 import type { User, LoginCredentials, RegisterData } from '@/types';
 
@@ -53,8 +53,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(true);
     try {
       await authService.register(data);
-      // Auto-login after registration
-      await login({ email: data.email, password: data.password });
+      // Токены уже сохранены в authService.register, загружаем профиль
+      await loadUser();
     } finally {
       setIsLoading(false);
     }
@@ -70,12 +70,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (authService.isAuthenticated()) {
-      const profile = await authService.getProfile();
-      setUser(profile);
+      try {
+        const profile = await authService.getProfile();
+        setUser(profile);
+      } catch (error) {
+        console.error('Failed to refresh profile:', error);
+      }
     }
-  };
+  }, []);
 
   const value: AuthContextType = {
     user,

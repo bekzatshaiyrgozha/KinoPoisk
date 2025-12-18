@@ -118,9 +118,11 @@ export const MovieDetailPage = () => {
       </Card>
 
       {/* Comments Section */}
-      <div className="mt-8">
-        <CommentList movieId={movie.id} />
-      </div>
+      {id && (
+        <div className="mt-8">
+          <CommentList movieId={Number(id)} />
+        </div>
+      )}
     </div>
   );
 };

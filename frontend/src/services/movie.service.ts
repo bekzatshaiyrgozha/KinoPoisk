@@ -29,10 +29,10 @@ export const movieService = {
   },
 
   async getMovie(id: number): Promise<Movie> {
-    const response = await apiClient.get<Movie>(
+    const response = await apiClient.get<{ success: boolean; data: Movie }>(
       API_ENDPOINTS.MOVIES.DETAIL(id)
     );
-    return response.data;
+    return response.data.data;
   },
 
   async uploadVideo(movieId: number, file: File): Promise<Movie> {

@@ -5,14 +5,8 @@ import { useAuth } from '@/contexts';
 import { ROUTES } from '@/constants';
 
 export const ProfilePage = () => {
-  const { user, isAuthenticated, isLoading, refreshProfile } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      refreshProfile();
-    }
-  }, [isAuthenticated, refreshProfile]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -61,8 +55,8 @@ export const ProfilePage = () => {
         <Card padding="lg">
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-500">Имя пользователя</p>
-              <p className="text-lg font-semibold text-gray-900">{user.username}</p>
+              <p className="text-sm text-gray-500">Email</p>
+              <p className="text-lg font-semibold text-gray-900">{user.email}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -72,9 +66,39 @@ export const ProfilePage = () => {
                   {fullName || 'Не указано'}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="text-lg font-semibold text-gray-900">{user.email}</p>
+              {user.date_joined && (
+                <div>
+                  <p className="text-sm text-gray-500">Дата регистрации</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {new Date(user.date_joined).toLocaleDateString('ru-RU', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-sm text-gray-500 mb-3">Статус аккаунта</p>
+              <div className="flex flex-wrap gap-2">
+                {user.is_active !== undefined && (
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      user.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {user.is_active ? 'Активен' : 'Неактивен'}
+                  </span>
+                )}
+                {user.is_staff && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    Администратор
+                  </span>
+                )}
               </div>
             </div>
           </div>

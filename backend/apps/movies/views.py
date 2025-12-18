@@ -92,7 +92,7 @@ class MovieViewSet(ViewSet):
         serializer = MovieSerializer(
             paginated_movies, many=True, context={"request": request}
         )
-        return paginator.get_paginated_response(serializer.data, HTTP_200_OK)
+        return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
         responses={
@@ -179,7 +179,7 @@ class MovieViewSet(ViewSet):
         serializer = MovieSerializer(
             paginated_movies, many=True, context={"request": request}
         )
-        return paginator.get_paginated_response(serializer.data, HTTP_200_OK)
+        return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
         request=VideoUploadRequestSerializer,
@@ -252,7 +252,7 @@ class MovieViewSet(ViewSet):
         serializer = CommentSerializer(
             paginated_comments, many=True, context={"request": request}
         )
-        return paginator.get_paginated_response(serializer.data, HTTP_200_OK)
+        return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
         request=CommentRequestSerializer,

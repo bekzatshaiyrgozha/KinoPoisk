@@ -11,23 +11,37 @@ import type {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthTokens> {
-    const response = await apiClient.post<AuthTokens>(
-      API_ENDPOINTS.AUTH.LOGIN,
-      credentials
-    );
+    const response = await apiClient.post<{
+      success: boolean;
+      data: User;
+      access: string;
+      refresh: string;
+      message?: string;
+    }>(API_ENDPOINTS.AUTH.LOGIN, credentials);
 
     storage.set(TOKEN_KEYS.ACCESS, response.data.access, 60 * 60 * 1000);
-    storage.set(TOKEN_KEYS.REFRESH, response.data.refresh, 7 * 24 * 60 * 60 * 1000); 
+    storage.set(TOKEN_KEYS.REFRESH, response.data.refresh, 7 * 24 * 60 * 60 * 1000);
 
-    return response.data;
+    return {
+      access: response.data.access,
+      refresh: response.data.refresh,
+    };
   },
 
   async register(data: RegisterData): Promise<User> {
-    const response = await apiClient.post<User>(
-      API_ENDPOINTS.AUTH.REGISTER,
-      data
-    );
-    return response.data;
+    const response = await apiClient.post<{
+      success: boolean;
+      data: User;
+      access: string;
+      refresh: string;
+      message?: string;
+    }>(API_ENDPOINTS.AUTH.REGISTER, data);
+
+    // Сохраняем токены после регистрации
+    storage.set(TOKEN_KEYS.ACCESS, response.data.access, 60 * 60 * 1000);
+    storage.set(TOKEN_KEYS.REFRESH, response.data.refresh, 7 * 24 * 60 * 60 * 1000);
+
+    return response.data.data;
   },
 
   async logout(): Promise<void> {
@@ -43,18 +57,20 @@ export const authService = {
   },
 
   async getProfile(): Promise<UserProfile> {
-    const response = await apiClient.get<UserProfile>(
-      API_ENDPOINTS.AUTH.PROFILE
-    );
-    return response.data;
+    const response = await apiClient.get<{
+      success: boolean;
+      data: UserProfile;
+    }>(API_ENDPOINTS.AUTH.PROFILE);
+    return response.data.data;
   },
 
   async updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
-    const response = await apiClient.put<UserProfile>(
-      API_ENDPOINTS.AUTH.PROFILE,
-      data
-    );
-    return response.data;
+    const response = await apiClient.put<{
+      success: boolean;
+      data: UserProfile;
+      message?: string;
+    }>(API_ENDPOINTS.AUTH.PROFILE, data);
+    return response.data.data;
   },
 
   isAuthenticated(): boolean {

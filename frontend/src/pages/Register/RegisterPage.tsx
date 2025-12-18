@@ -7,7 +7,6 @@ import { isEmail, isPasswordValid } from '@/utils';
 
 export const RegisterPage = () => {
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -22,10 +21,6 @@ export const RegisterPage = () => {
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.username) {
-      newErrors.username = MESSAGES.VALIDATION.REQUIRED;
-    }
 
     if (!formData.email) {
       newErrors.email = MESSAGES.VALIDATION.REQUIRED;
@@ -58,7 +53,6 @@ export const RegisterPage = () => {
 
     try {
       await register({
-        username: formData.username,
         email: formData.email,
         password: formData.password,
         password_confirm: formData.confirmPassword,
@@ -91,16 +85,6 @@ export const RegisterPage = () => {
               <p className="text-sm text-red-600">{errors.general}</p>
             </div>
           )}
-
-          <Input
-            label="Имя пользователя"
-            type="text"
-            value={formData.username}
-            onChange={(e) => handleChange('username', e.target.value)}
-            error={errors.username}
-            required
-            fullWidth
-          />
 
           <Input
             label="Email"

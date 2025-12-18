@@ -1,10 +1,12 @@
 export interface User {
   id: number;
-  username: string;
+  username?: string;
   email: string;
   first_name: string;
   last_name: string;
   is_staff?: boolean;
+  date_joined?: string;
+  is_active?: boolean;
 }
 
 export interface AuthTokens {
@@ -18,7 +20,6 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
-  username: string;
   email: string;
   password: string;
   password_confirm: string;
