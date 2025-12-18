@@ -106,7 +106,11 @@ export const MovieDetailPage = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 Video
               </h2>
-              <VideoPlayer src={movie.video_url || movie.video} title={movie.title} />
+              <VideoPlayer 
+                src={movie.video_url || movie.video} 
+                title={movie.title}
+                cover={movie.poster}
+              />
               {isAuthenticated && user?.is_staff && (
                 <div className="mt-4">
                   <VideoUploadForm movieId={movie.id} onUploaded={refetch} />
