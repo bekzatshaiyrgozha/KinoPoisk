@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { commentService } from '@/services';
 import { Comment } from '@/types';
 import { CommentItem } from '../CommentItem/CommentItem';
@@ -13,8 +13,10 @@ export const CommentList = ({ movieId }: CommentListProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadComments = async () => {
-    setIsLoading(true);
+  const loadComments = useCallback(async (showLoader = true) => {
+    if (showLoader) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -23,17 +25,22 @@ export const CommentList = ({ movieId }: CommentListProps) => {
     } catch (err: any) {
       setError(err.message || 'Failed to load comments');
     } finally {
-      setIsLoading(false);
+      if (showLoader) {
+        setIsLoading(false);
+      }
     }
-  };
-
-  useEffect(() => {
-    loadComments();
   }, [movieId]);
 
-  const handleCommentAdded = () => {
-    loadComments();
-  };
+  useEffect(() => {
+    loadComments(true);
+  }, [loadComments]);
+
+  const handleCommentAdded = useCallback(async () => {
+    // Обновляем список комментариев без показа loader
+    // Используем небольшую задержку чтобы дать серверу время обработать запрос
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await loadComments(false);
+  }, [loadComments]);
 
   if (isLoading) {
     return <div className="text-center py-8 text-gray-600">Loading comments...</div>;

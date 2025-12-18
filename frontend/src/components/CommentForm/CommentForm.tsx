@@ -20,6 +20,7 @@ export const CommentForm = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (!text.trim()) {
       setError('Comment cannot be empty');
@@ -40,7 +41,10 @@ export const CommentForm = ({
       }
 
       setText('');
-      onSuccess();
+      // Используем setTimeout чтобы убедиться, что состояние обновилось перед вызовом onSuccess
+      setTimeout(() => {
+        onSuccess();
+      }, 0);
     } catch (err: any) {
       setError(err.message || 'Failed to post comment');
     } finally {
