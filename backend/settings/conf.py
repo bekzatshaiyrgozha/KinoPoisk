@@ -15,4 +15,8 @@ POSTGRESQL_URL = config(
     cast=str,
 )
 
-SECRET_KEY = "django-insecure-b@wp(sggy#_@61*7gxq5-yxu)y54&t1w#f*f2dbkq(f0kc=1qo"
+SECRET_KEY = config(
+    "SECRET_KEY",
+    default="django-insecure-b@wp(sggy#_@61*7gxq5-yxu)y54&t1w#f*f2dbkq(f0kc=1qo",
+    cast=str,
+)
