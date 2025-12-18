@@ -16,7 +16,11 @@ from rest_framework.viewsets import ViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # Project modules
-from apps.abstracts.serializers import ErrorResponseSerializer
+from apps.abstracts.serializers import (
+    ErrorResponseSerializer,
+    UnauthorizedResponseSerializer,
+    MethodNotAllowedResponseSerializer,
+)
 from apps.accounts.serializers import UserSerializer
 from apps.accounts.serializers_requests import (
     LoginRequestSerializer,
@@ -35,7 +39,7 @@ class AuthViewSet(ViewSet):
         responses={
             HTTP_201_CREATED: UserSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(methods=["POST"], detail=False, url_path="register")
@@ -74,7 +78,7 @@ class AuthViewSet(ViewSet):
         responses={
             HTTP_200_OK: UserSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(methods=["POST"], detail=False, url_path="login")
@@ -108,7 +112,7 @@ class AuthViewSet(ViewSet):
         responses={
             HTTP_200_OK: ErrorResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(
@@ -143,8 +147,8 @@ class UserProfileViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: UserSuccessResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(methods=["GET"], detail=False, url_path="profile")
@@ -162,8 +166,8 @@ class UserProfileViewSet(ViewSet):
         responses={
             HTTP_200_OK: UserSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(methods=["PUT", "PATCH"], detail=False, url_path="profile")

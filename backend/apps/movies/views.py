@@ -57,7 +57,13 @@ from apps.movies.serializers_responses import (
     FavoriteListSuccessResponseSerializer,
 )
 from apps.movies.pagination import StandardResultsSetPagination
-from apps.abstracts.serializers import ErrorResponseSerializer
+from apps.abstracts.serializers import (
+    ErrorResponseSerializer,
+    UnauthorizedResponseSerializer,
+    NotFoundResponseSerializer,
+    ForbiddenResponseSerializer,
+    MethodNotAllowedResponseSerializer,
+)
 from apps.accounts.permissions import IsOwnerOrAdmin
 
 User = get_user_model()
@@ -71,7 +77,7 @@ class MovieViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: MovieListSuccessResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(methods=["GET"], detail=False, url_path="list")
@@ -91,9 +97,10 @@ class MovieViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: MovieSuccessResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(
@@ -125,8 +132,8 @@ class MovieViewSet(ViewSet):
         responses={
             HTTP_200_OK: MovieListSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(
@@ -179,10 +186,10 @@ class MovieViewSet(ViewSet):
         responses={
             HTTP_201_CREATED: MovieSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_403_FORBIDDEN: ForbiddenResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(
@@ -221,9 +228,9 @@ class MovieViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: CommentListSuccessResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(
@@ -252,8 +259,8 @@ class MovieViewSet(ViewSet):
         responses={
             HTTP_201_CREATED: CommentSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(
@@ -293,9 +300,9 @@ class MovieViewSet(ViewSet):
         responses={
             HTTP_201_CREATED: RatingSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(
@@ -343,9 +350,9 @@ class LikeViewSet(ViewSet):
             HTTP_200_OK: ErrorResponseSerializer,
             HTTP_201_CREATED: ErrorResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     @action(methods=["POST"], detail=False, url_path="toggle")
@@ -419,8 +426,9 @@ class ReviewViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: ReviewListSuccessResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def list(self, request):
@@ -441,9 +449,9 @@ class ReviewViewSet(ViewSet):
         responses={
             HTTP_201_CREATED: ReviewSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def create(self, request):
@@ -462,9 +470,10 @@ class ReviewViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: ReviewSuccessResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def retrieve(self, request, pk=None):
@@ -487,10 +496,10 @@ class ReviewViewSet(ViewSet):
         responses={
             HTTP_200_OK: ReviewSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_403_FORBIDDEN: ForbiddenResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def partial_update(self, request, pk=None):
@@ -525,11 +534,12 @@ class ReviewViewSet(ViewSet):
 
     @extend_schema(
         responses={
-            HTTP_204_NO_CONTENT: None,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_200_OK: ReviewSuccessResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_403_FORBIDDEN: ForbiddenResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def destroy(self, request, pk=None):
@@ -560,8 +570,9 @@ class RatingViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: RatingDetailListSuccessResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def list(self, request):
@@ -582,9 +593,9 @@ class RatingViewSet(ViewSet):
         responses={
             HTTP_200_OK: RatingDetailSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def create(self, request):
@@ -605,10 +616,10 @@ class RatingViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_204_NO_CONTENT: None,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_403_FORBIDDEN: ForbiddenResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def destroy(self, request, pk=None):
@@ -639,8 +650,8 @@ class FavoriteViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: FavoriteListSuccessResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def list(self, request):
@@ -660,9 +671,9 @@ class FavoriteViewSet(ViewSet):
         responses={
             HTTP_201_CREATED: FavoriteSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def create(self, request):
@@ -693,10 +704,10 @@ class FavoriteViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_204_NO_CONTENT: None,
-            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
-            HTTP_403_FORBIDDEN: ErrorResponseSerializer,
-            HTTP_404_NOT_FOUND: ErrorResponseSerializer,
-            HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: UnauthorizedResponseSerializer,
+            HTTP_403_FORBIDDEN: ForbiddenResponseSerializer,
+            HTTP_404_NOT_FOUND: NotFoundResponseSerializer,
+            HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
     def destroy(self, request, pk=None):
