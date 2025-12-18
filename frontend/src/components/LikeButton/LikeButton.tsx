@@ -39,6 +39,7 @@ export const LikeButton = ({
 
   return (
     <button
+      type="button"
       className={`
         flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 text-sm font-medium
         ${isLiked

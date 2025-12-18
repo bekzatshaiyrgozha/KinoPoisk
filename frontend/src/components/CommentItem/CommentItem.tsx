@@ -44,6 +44,7 @@ export const CommentItem = ({ comment, movieId, onReplyAdded }: CommentItemProps
           initialIsLiked={comment.is_liked}
         />
         <button
+          type="button"
           className="px-4 py-2 bg-transparent border-none text-gray-600 text-sm transition-colors hover:text-red-500 cursor-pointer"
           onClick={() => setShowReplyForm(!showReplyForm)}
         >

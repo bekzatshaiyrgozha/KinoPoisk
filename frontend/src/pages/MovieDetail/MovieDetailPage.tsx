@@ -11,7 +11,7 @@ import { formatDuration } from '@/utils';
 
 export const MovieDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { movie, loading, error, refetch } = useMovie(Number(id));
+  const { movie, loading, error, refetch, refetchSilent } = useMovie(Number(id));
   const { isAuthenticated, user } = useAuth();
 
   if (loading) {
@@ -81,7 +81,7 @@ export const MovieDetailPage = () => {
                 movieId={movie.id}
                 averageRating={movie.average_rating}
                 userRating={movie.user_rating}
-                onRatingChange={refetch}
+                onRatingChange={refetchSilent}
               />
             </div>
 

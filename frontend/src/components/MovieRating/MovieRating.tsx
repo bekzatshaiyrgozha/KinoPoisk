@@ -25,7 +25,12 @@ export const MovieRating = ({
         setUserRating(initialUserRating || null);
     }, [initialUserRating]);
 
-    const handleRate = async (score: number) => {
+    const handleRate = async (score: number, e?: React.MouseEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
         console.log('=== RATING DEBUG ===');
         console.log('Attempting to rate movie:', movieId, 'with score:', score);
 
@@ -44,10 +49,13 @@ export const MovieRating = ({
 
             setUserRating(score);
 
-            // Notify parent component to refresh data
+            // Notify parent component to refresh data silently (without showing loader)
             if (onRatingChange) {
                 console.log('Calling onRatingChange to refresh data...');
-                onRatingChange();
+                // Use setTimeout to ensure the state update happens first
+                setTimeout(() => {
+                    onRatingChange();
+                }, 0);
             }
 
             console.log('Rating process completed!');
@@ -92,9 +100,11 @@ export const MovieRating = ({
                         <button
                             key={`user-${star}`}
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 console.log('Star clicked:', star);
-                                handleRate(star);
+                                handleRate(star, e);
                             }}
                             onMouseEnter={() => setHoverRating(star)}
                             onMouseLeave={() => setHoverRating(0)}

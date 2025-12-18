@@ -234,7 +234,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             ref={videoRef}
             src={src}
             className="w-full h-auto"
-            onClick={togglePlay}
+            onClick={(e) => {
+              e.preventDefault();
+              togglePlay();
+            }}
             poster={cover}
           />
 
@@ -299,6 +302,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           setIsShuffle(!isShuffle);
                         }}
@@ -318,6 +322,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           skipBackward();
                         }}
@@ -332,6 +337,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     >
                       <Button
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           togglePlay();
                         }}
@@ -354,6 +360,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           skipForward();
                         }}
@@ -370,6 +377,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           setIsRepeat(!isRepeat);
                         }}
@@ -395,6 +403,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                           variant="ghost"
                           size="icon"
                           onClick={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
                             toggleMute();
                           }}
@@ -425,6 +434,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           toggleFullscreen();
                         }}

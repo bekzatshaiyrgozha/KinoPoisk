@@ -7,6 +7,7 @@ interface UseMovieResult {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  refetchSilent: () => Promise<void>;
 }
 
 export function useMovie(id: number): UseMovieResult {
@@ -14,10 +15,12 @@ export function useMovie(id: number): UseMovieResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMovie = async () => {
+  const fetchMovie = async (showLoader = true) => {
     if (!id) return;
 
-    setLoading(true);
+    if (showLoader) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -31,18 +34,29 @@ export function useMovie(id: number): UseMovieResult {
     } catch (err: any) {
       setError(err.message || 'Failed to fetch movie');
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchMovie();
+    fetchMovie(true);
   }, [id]);
+
+  const refetch = async () => {
+    await fetchMovie(true);
+  };
+
+  const refetchSilent = async () => {
+    await fetchMovie(false);
+  };
 
   return {
     movie,
     loading,
     error,
-    refetch: fetchMovie,
+    refetch,
+    refetchSilent,
   };
 }
