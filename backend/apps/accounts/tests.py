@@ -1,14 +1,17 @@
 # python modules
 import pytest
 from typing import Dict, Any, Callable
+
 # django modules
 from django.contrib.auth import get_user_model
-#django REST Framework
+
+# django REST Framework
 from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
+
 
 @pytest.fixture
 def api_client() -> APIClient:
@@ -30,23 +33,24 @@ def valid_user_data() -> Dict[str, str]:
 @pytest.fixture
 def create_user() -> Callable:
     """Fixture factory for creating users."""
+
     def _create_user(
         username: str = "testuser",
         email: str = "test@example.com",
         password: str = "TestPass123!",
-        **kwargs: Any
+        **kwargs: Any,
     ) -> User:
         return User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            **kwargs
+            username=username, email=email, password=password, **kwargs
         )
+
     return _create_user
 
 
 @pytest.fixture
-def authenticated_client(api_client: APIClient, create_user: Callable) -> tuple[APIClient, User]:
+def authenticated_client(
+    api_client: APIClient, create_user: Callable
+) -> tuple[APIClient, User]:
     """Fixture that provides an authenticated API client with user."""
     user: User = create_user()
     refresh: RefreshToken = RefreshToken.for_user(user)
@@ -54,16 +58,12 @@ def authenticated_client(api_client: APIClient, create_user: Callable) -> tuple[
     return api_client, user
 
 
-
-
 @pytest.mark.django_db
 class TestUserRegistration:
     """Test suite for user registration endpoint."""
 
     def test_register_success(
-        self,
-        api_client: APIClient,
-        valid_user_data: Dict[str, str]
+        self, api_client: APIClient, valid_user_data: Dict[str, str]
     ) -> None:
         """Test successful user registration."""
         response = api_client.post("/api/auth/register/", valid_user_data)
@@ -78,7 +78,7 @@ class TestUserRegistration:
         self,
         api_client: APIClient,
         create_user: Callable,
-        valid_user_data: Dict[str, str]
+        valid_user_data: Dict[str, str],
     ) -> None:
         """Test registration with duplicate username."""
         create_user(username="testuser", email="first@example.com")
@@ -91,10 +91,10 @@ class TestUserRegistration:
         self,
         api_client: APIClient,
         create_user: Callable,
-        valid_user_data: Dict[str, str]
+        valid_user_data: Dict[str, str],
     ) -> None:
         """Test registration with duplicate email."""
-        
+
         create_user(username="otheruser", email="test@example.com")
 
         response = api_client.post("/api/auth/register/", valid_user_data)
@@ -102,9 +102,7 @@ class TestUserRegistration:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_register_weak_password(
-        self,
-        api_client: APIClient,
-        valid_user_data: Dict[str, str]
+        self, api_client: APIClient, valid_user_data: Dict[str, str]
     ) -> None:
         """Test registration with weak password."""
         weak_data: Dict[str, str] = valid_user_data.copy()
@@ -116,9 +114,7 @@ class TestUserRegistration:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_register_password_mismatch(
-        self,
-        api_client: APIClient,
-        valid_user_data: Dict[str, str]
+        self, api_client: APIClient, valid_user_data: Dict[str, str]
     ) -> None:
         """Test registration with mismatched passwords."""
         mismatch_data: Dict[str, str] = valid_user_data.copy()
@@ -128,10 +124,7 @@ class TestUserRegistration:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_register_missing_required_fields(
-        self,
-        api_client: APIClient
-    ) -> None:
+    def test_register_missing_required_fields(self, api_client: APIClient) -> None:
         """Test registration with missing required fields."""
         incomplete_data: Dict[str, str] = {"username": "testuser"}
 
@@ -141,9 +134,7 @@ class TestUserRegistration:
         assert "email" in response.data or "password" in response.data
 
     def test_register_invalid_email_format(
-        self,
-        api_client: APIClient,
-        valid_user_data: Dict[str, str]
+        self, api_client: APIClient, valid_user_data: Dict[str, str]
     ) -> None:
         """Test registration with invalid email format."""
         invalid_data: Dict[str, str] = valid_user_data.copy()
@@ -158,17 +149,13 @@ class TestUserRegistration:
 class TestUserLogin:
     """Test suite for user login endpoint."""
 
-    def test_login_success(
-        self,
-        api_client: APIClient,
-        create_user: Callable
-    ) -> None:
+    def test_login_success(self, api_client: APIClient, create_user: Callable) -> None:
         """Test successful login."""
         user: User = create_user()
 
         login_data: Dict[str, str] = {
             "email": "test@example.com",
-            "password": "TestPass123!"
+            "password": "TestPass123!",
         }
 
         response = api_client.post("/api/auth/login/", login_data)
@@ -180,30 +167,25 @@ class TestUserLogin:
         assert response.data["user"]["email"] == user.email
 
     def test_login_wrong_password(
-        self,
-        api_client: APIClient,
-        create_user: Callable
+        self, api_client: APIClient, create_user: Callable
     ) -> None:
         """Test login with incorrect password."""
         create_user()
 
         login_data: Dict[str, str] = {
             "email": "test@example.com",
-            "password": "WrongPassword123!"
+            "password": "WrongPassword123!",
         }
 
         response = api_client.post("/api/auth/login/", login_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_login_nonexistent_user(
-        self,
-        api_client: APIClient
-    ) -> None:
+    def test_login_nonexistent_user(self, api_client: APIClient) -> None:
         """Test login with non-existent user."""
         login_data: Dict[str, str] = {
             "email": "nonexistent@example.com",
-            "password": "TestPass123!"
+            "password": "TestPass123!",
         }
 
         response = api_client.post("/api/auth/login/", login_data)
@@ -211,9 +193,7 @@ class TestUserLogin:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_login_inactive_user(
-        self,
-        api_client: APIClient,
-        create_user: Callable
+        self, api_client: APIClient, create_user: Callable
     ) -> None:
         """Test login with inactive user."""
         user: User = create_user()
@@ -222,7 +202,7 @@ class TestUserLogin:
 
         login_data: Dict[str, str] = {
             "email": "test@example.com",
-            "password": "TestPass123!"
+            "password": "TestPass123!",
         }
 
         response = api_client.post("/api/auth/login/", login_data)
@@ -234,17 +214,13 @@ class TestUserLogin:
 class TestUserLogout:
     """Test suite for user logout endpoint."""
 
-    def test_logout_success(
-        self,
-        api_client: APIClient,
-        create_user: Callable
-    ) -> None:
+    def test_logout_success(self, api_client: APIClient, create_user: Callable) -> None:
         """Test successful logout."""
         user: User = create_user()
 
         login_response = api_client.post(
             "/api/auth/login/",
-            {"email": "test@example.com", "password": "TestPass123!"}
+            {"email": "test@example.com", "password": "TestPass123!"},
         )
 
         refresh_token: str = login_response.data["refresh"]
@@ -252,29 +228,26 @@ class TestUserLogout:
 
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
         logout_response = api_client.post(
-            "/api/auth/logout/",
-            {"refresh": refresh_token}
+            "/api/auth/logout/", {"refresh": refresh_token}
         )
 
         assert logout_response.status_code == status.HTTP_200_OK
         assert "message" in logout_response.data
 
     def test_logout_without_token(
-        self,
-        api_client: APIClient,
-        create_user: Callable
+        self, api_client: APIClient, create_user: Callable
     ) -> None:
         """Test logout without providing refresh token - should still succeed."""
         user: User = create_user()
-        
+
         # Login to get access token
         login_response = api_client.post(
             "/api/auth/login/",
-            {"email": "test@example.com", "password": "TestPass123!"}
+            {"email": "test@example.com", "password": "TestPass123!"},
         )
-        
+
         access_token: str = login_response.data["access"]
-        
+
         # Logout without refresh token (idempotent operation)
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
         response = api_client.post("/api/auth/logout/", {})
@@ -284,31 +257,22 @@ class TestUserLogout:
         assert "message" in response.data
 
     def test_logout_with_invalid_token(
-        self,
-        api_client: APIClient,
-        create_user: Callable
+        self, api_client: APIClient, create_user: Callable
     ) -> None:
         """Test logout with invalid refresh token - should still succeed."""
         user: User = create_user()
         refresh: RefreshToken = RefreshToken.for_user(user)
 
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {str(refresh.access_token)}")
-        response = api_client.post(
-            "/api/auth/logout/",
-            {"refresh": "invalid_token"}
-        )
+        response = api_client.post("/api/auth/logout/", {"refresh": "invalid_token"})
 
         assert response.status_code == status.HTTP_200_OK
         assert "message" in response.data
-    
-    def test_logout_unauthenticated(
-        self,
-        api_client: APIClient
-    ) -> None:
+
+    def test_logout_unauthenticated(self, api_client: APIClient) -> None:
         """Test logout without authentication - should still succeed (idempotent)."""
         response = api_client.post("/api/auth/logout/", {})
-        
-        
+
         assert response.status_code == status.HTTP_200_OK
         assert "message" in response.data
 
@@ -318,8 +282,7 @@ class TestUserProfile:
     """Test suite for user profile endpoints."""
 
     def test_get_profile_authenticated(
-        self,
-        authenticated_client: tuple[APIClient, User]
+        self, authenticated_client: tuple[APIClient, User]
     ) -> None:
         """Test getting profile when authenticated."""
         client, user = authenticated_client
@@ -331,18 +294,14 @@ class TestUserProfile:
         assert response.data["email"] == user.email
         assert "id" in response.data
 
-    def test_get_profile_unauthenticated(
-        self,
-        api_client: APIClient
-    ) -> None:
+    def test_get_profile_unauthenticated(self, api_client: APIClient) -> None:
         """Test getting profile without authentication."""
         response = api_client.get("/api/auth/profile/")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_update_profile_success(
-        self,
-        authenticated_client: tuple[APIClient, User]
+        self, authenticated_client: tuple[APIClient, User]
     ) -> None:
         """Test successful profile update."""
         client, user = authenticated_client
@@ -363,8 +322,7 @@ class TestUserProfile:
         assert user.last_name == "Doe"
 
     def test_partial_update_profile(
-        self,
-        authenticated_client: tuple[APIClient, User]
+        self, authenticated_client: tuple[APIClient, User]
     ) -> None:
         """Test partial profile update using PATCH."""
         client, user = authenticated_client
@@ -379,17 +337,13 @@ class TestUserProfile:
         user.refresh_from_db()
         assert user.first_name == "Jane"
 
-    def test_update_profile_unauthenticated(
-        self,
-        api_client: APIClient
-    ) -> None:
+    def test_update_profile_unauthenticated(self, api_client: APIClient) -> None:
         """Test profile update without authentication."""
         update_data: Dict[str, str] = {"first_name": "John"}
 
         response = api_client.put("/api/auth/profile/", update_data)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
 
 
 @pytest.mark.django_db
@@ -408,7 +362,7 @@ def test_registration_with_various_inputs(
     username: str,
     email: str,
     password: str,
-    expected_status: int
+    expected_status: int,
 ) -> None:
     """Test registration with various input combinations."""
     data: Dict[str, str] = {
@@ -422,65 +376,56 @@ def test_registration_with_various_inputs(
     assert response.status_code == expected_status
 
 
-
 @pytest.mark.django_db
 class TestAuthenticationFlow:
     """Integration tests for complete authentication flow."""
 
     def test_complete_auth_flow(
-        self,
-        api_client: APIClient,
-        valid_user_data: Dict[str, str]
+        self, api_client: APIClient, valid_user_data: Dict[str, str]
     ) -> None:
         """Test complete flow: register -> login -> access profile -> logout."""
-        
+
         register_response = api_client.post("/api/auth/register/", valid_user_data)
         assert register_response.status_code == status.HTTP_201_CREATED
-        
+
         login_response = api_client.post(
             "/api/auth/login/",
             {
                 "email": valid_user_data["email"],
-                "password": valid_user_data["password"]
-            }
+                "password": valid_user_data["password"],
+            },
         )
         assert login_response.status_code == status.HTTP_200_OK
-        
+
         access_token: str = login_response.data["access"]
         refresh_token: str = login_response.data["refresh"]
-        
+
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
         profile_response = api_client.get("/api/auth/profile/")
         assert profile_response.status_code == status.HTTP_200_OK
         assert profile_response.data["email"] == valid_user_data["email"]
-        
-        update_response = api_client.patch(
-            "/api/auth/profile/",
-            {"first_name": "Test"}
-        )
+
+        update_response = api_client.patch("/api/auth/profile/", {"first_name": "Test"})
         assert update_response.status_code == status.HTTP_200_OK
         assert update_response.data["first_name"] == "Test"
-        
+
         logout_response = api_client.post(
-            "/api/auth/logout/",
-            {"refresh": refresh_token}
+            "/api/auth/logout/", {"refresh": refresh_token}
         )
         assert logout_response.status_code == status.HTTP_200_OK
 
     def test_user_cannot_access_after_deactivation(
-        self,
-        api_client: APIClient,
-        create_user: Callable
+        self, api_client: APIClient, create_user: Callable
     ) -> None:
         """Test that deactivated user cannot login."""
         user: User = create_user()
-        
+
         user.is_active = False
         user.save()
-        
+
         login_response = api_client.post(
             "/api/auth/login/",
-            {"email": "test@example.com", "password": "TestPass123!"}
+            {"email": "test@example.com", "password": "TestPass123!"},
         )
-        
+
         assert login_response.status_code == status.HTTP_400_BAD_REQUEST

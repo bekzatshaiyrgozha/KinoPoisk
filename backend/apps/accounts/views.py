@@ -1,9 +1,8 @@
-# Python modues 
-from typing import Any,Optional
+# Python modues
+from typing import Any, Optional
 
-#Django Modules 
-from django.contrib.auth import logout,get_user_model
-from django.http import HttpRequest
+# Django Modules
+from django.contrib.auth import logout, get_user_model
 
 # Django REST Framework
 from rest_framework.viewsets import ViewSet
@@ -15,7 +14,8 @@ from rest_framework.status import (
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
     HTTP_405_METHOD_NOT_ALLOWED,
-    HTTP_401_UNAUTHORIZED
+    HTTP_401_UNAUTHORIZED,
+    HTTP_403_FORBIDDEN,
 )
 from rest_framework.decorators import action
 
@@ -36,27 +36,31 @@ from apps.abstracts.serializers import (
     AuthResponseSerializer,
 )
 
-User =get_user_model()
+User = get_user_model()
+
 
 class AuthViewSet(ViewSet):
     """
-    VIew set for haning auth-related endpoints related to the registration,logout,login
+    ViewSet for handling auth-related endpoints: registration, login, and logout.
     """
-    permission_classes=(AllowAny,)
+
+    permission_classes = (AllowAny,)
 
     @extend_schema(
         summary="User Registration",
         request=UserRegistrationSerializer,
         responses={
-            HTTP_201_CREATED:OpenApiResponse(
-                description="Succesful registration",
-                response=AuthResponseSerializer
+            HTTP_201_CREATED: OpenApiResponse(
+                description="Successful registration", response=AuthResponseSerializer
             ),
-            HTTP_400_BAD_REQUEST:OpenApiResponse(
-                description="Bad request",
-                response=ValidationErrorResponseSerializer
+            HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Bad request", response=ValidationErrorResponseSerializer
             ),
-        }
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
+        },
     )
     @action(
         methods=("POST",),
@@ -65,59 +69,53 @@ class AuthViewSet(ViewSet):
         url_name="register",
     )
     def register(
-        self,
-        request:DRFRequest,
-        *args:tuple[Any,...],
-        **kwargs:dict[str,Any]
-    )->DRFResponse:
+        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
+    ) -> DRFResponse:
         """
-       Holly shit this is docstrings  
-       Handle POST request for user registration 
+        Handle POST request for user registration.
 
-       Parameters:
-       reqeust:DrfRequest, 
+        Parameters:
+            request (DRFRequest): The request object containing registration data.
 
-
-       Return 
-       a respone containig user data and jwt tokens
+        Returns:
+            DRFResponse: A response containing user data and JWT tokens.
         """
-        serializer:UserRegistrationSerializer=UserRegistrationSerializer(
+        serializer: UserRegistrationSerializer = UserRegistrationSerializer(
             data=request.data
-            )
+        )
         serializer.is_valid(raise_exception=True)
-        
+
         user: User = serializer.save()
-        refresh_token:RefreshToken=RefreshToken.for_user(user)
-        access_token:str=str(refresh_token.access_token)
+        refresh_token: RefreshToken = RefreshToken.for_user(user)
+        access_token: str = str(refresh_token.access_token)
 
         return DRFResponse(
             data={
-                "user":UserSerializer(user).data, 
-                "refresh":str(refresh_token),
-                "access":access_token, 
-                "message":"User registred sucessfully",
+                "user": UserSerializer(user).data,
+                "refresh": str(refresh_token),
+                "access": access_token,
+                "message": "User registered successfully",
             },
-            status=HTTP_201_CREATED
+            status=HTTP_201_CREATED,
         )
-    
 
     @extend_schema(
-        summary="User Login", 
-        request=UserLoginSerializer, 
+        summary="User Login",
+        request=UserLoginSerializer,
         responses={
-            HTTP_200_OK:OpenApiResponse(
-                description="Succesfully logined",
+            HTTP_200_OK: OpenApiResponse(
+                description="Successfully logged in",
                 response=AuthResponseSerializer,
             ),
-            HTTP_400_BAD_REQUEST:OpenApiResponse(
+            HTTP_400_BAD_REQUEST: OpenApiResponse(
                 description="Bad request",
-                response=ValidationErrorResponseSerializer,
+                response=ErrorResponseSerializer,
             ),
-            HTTP_405_METHOD_NOT_ALLOWED:OpenApiResponse(
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
                 description="Method not allowed",
                 response=ValidationErrorResponseSerializer,
-            )
-        }
+            ),
+        },
     )
     @action(
         methods=("POST",),
@@ -127,104 +125,131 @@ class AuthViewSet(ViewSet):
     )
     def login(
         self,
-        request:DRFRequest,
-        *args:tuple[Any,...],
-        **kwargs:dict[str,Any],
-    )->DRFResponse:
+        request: DRFRequest,
+        *args: tuple[Any, ...],
+        **kwargs: dict[str, Any],
+    ) -> DRFResponse:
         """
-       User login get in the input request with the DrfRequest 
+        Handle POST request for user login.
 
-       in output get response using data and jwt tokens
+        Parameters:
+            request (DRFRequest): The request object containing login credentials.
+
+        Returns:
+            DRFResponse: A response containing user data and JWT tokens.
         """
-        seralizer:UserLoginSerializer=UserLoginSerializer(data=request.data)
+        seralizer: UserLoginSerializer = UserLoginSerializer(data=request.data)
         seralizer.is_valid(raise_exception=True)
-        user:User=seralizer.validated_data.pop("user")
+        user: User = seralizer.validated_data.pop("user")
 
-        refresh_token:RefreshToken=RefreshToken.for_user(user)
-        acccess_token:str=str(refresh_token.access_token)
+        refresh_token: RefreshToken = RefreshToken.for_user(user)
+        acccess_token: str = str(refresh_token.access_token)
 
         return DRFResponse(
             data={
-                "user":UserSerializer(user).data, 
-                "refresh":str(refresh_token),
-                "access":acccess_token,
-                "message":"Login suceessfull!!",
+                "user": UserSerializer(user).data,
+                "refresh": str(refresh_token),
+                "access": acccess_token,
+                "message": "Login successful",
             },
-            status=HTTP_200_OK
+            status=HTTP_200_OK,
         )
-    
+
     @extend_schema(
         summary="User logout",
         responses={
-            HTTP_200_OK:OpenApiResponse(
-                description="Succesfully logged out",
+            HTTP_200_OK: OpenApiResponse(
+                description="Successfully logged out",
                 response=SuccessMessageSerializer,
-            
             ),
-            HTTP_400_BAD_REQUEST:OpenApiResponse(
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized - Authentication credentials were not provided.",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Forbidden - You do not have permission to perform this action.",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_400_BAD_REQUEST: OpenApiResponse(
                 description="Bad request",
                 response=ErrorResponseSerializer,
             ),
-        }
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
+        },
     )
     @action(
         methods=("POST",),
         detail=False,
         url_path="logout",
         url_name="logout",
-        permission_classes=(IsAuthenticated,)
+        permission_classes=(IsAuthenticated,),
     )
     def logout(
         self,
-        request:DRFRequest,
-        *args:tuple[Any,...],
-        **kwargs:dict[str,Any],
-    )->DRFResponse:
+        request: DRFRequest,
+        *args: tuple[Any, ...],
+        **kwargs: dict[str, Any],
+    ) -> DRFResponse:
         """
-        handling post request to logout 
-        using DrfRequest 
+        Handle POST request for user logout.
+        Blacklists the refresh token if provided.
 
-        and in the end we get the suceesfiluu logout 
+        Parameters:
+            request (DRFRequest): The request object containing the refresh token.
 
+        Returns:
+            DRFResponse: A success message.
         """
         try:
-            refresh_token:Optional[str]=request.data.get("refresh")
+            refresh_token: Optional[str] = request.data.get("refresh")
 
             if refresh_token:
                 try:
-                    token:RefreshToken=RefreshToken(refresh_token)
+                    token: RefreshToken = RefreshToken(refresh_token)
                     token.blacklist()
                 except Exception:
-                    pass 
-            
+                    pass
+
             logout(request)
 
             return DRFResponse(
-                data={"message":"Suceesfully logout from the KinoPoisk"},
-                status=HTTP_200_OK
-                    
+                data={"message": "Successfully logged out"},
+                status=HTTP_200_OK,
             )
         except Exception as e:
-            return DRFResponse(
-                data={"error":str(e)},
-                status=HTTP_400_BAD_REQUEST
-            )
+            return DRFResponse(data={"error": str(e)}, status=HTTP_400_BAD_REQUEST)
 
 
 class UserProfileViewSet(ViewSet):
     """
-   Operation for handling user profile
+    Operation for handling user profile
     """
+
     permission_classes = (IsAuthenticated,)
-    
+
     @extend_schema(
         summary="Get User Profile",
         responses={
-            HTTP_200_OK:OpenApiResponse(
+            HTTP_200_OK: OpenApiResponse(
                 description="Return the profile data",
                 response=UserSerializer,
             ),
-        }
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized - Authentication credentials were not provided.",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Forbidden - You do not have permission to perform this action.",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
+        },
     )
     @action(
         methods=("GET",),
@@ -233,58 +258,65 @@ class UserProfileViewSet(ViewSet):
         url_name="profile",
     )
     def get_profile(
-        self,
-        request:DRFRequest,
-        *args:tuple[Any,...],
-        **kwargs:dict[str,Any]
-    )->DRFResponse:
+        self, request: DRFRequest, *args: tuple[Any, ...], **kwargs: dict[str, Any]
+    ) -> DRFResponse:
         """
-       this is endpoint for 
-       getting userproflie 
-       and in the end you get the user profile like the data
+        Retrieve the authenticated user's profile.
+
+        Returns:
+            DRFResponse: The user's profile data.
         """
-        user:User=request.user 
+        user: User = request.user
 
         return DRFResponse(
             data=UserSerializer(user).data,
             status=HTTP_200_OK,
         )
+
     @extend_schema(
         summary="Updating the Profile User",
         request=UserSerializer,
         responses={
-            HTTP_200_OK:OpenApiResponse(
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Forbidden - You do not have permission to perform this action.",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_200_OK: OpenApiResponse(
                 description="Returns the updated user profile",
                 response=UserSerializer,
             ),
-            HTTP_400_BAD_REQUEST:OpenApiResponse(
+            HTTP_400_BAD_REQUEST: OpenApiResponse(
                 description="Bad request due to invalid data",
                 response=ValidationErrorResponseSerializer,
             ),
-            HTTP_401_UNAUTHORIZED:OpenApiResponse(
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
                 description="Unauthorized to perform this action",
                 response=ErrorResponseSerializer,
             ),
-        }
+        },
     )
     @action(
-        methods=("PUT","PATCH"),
+        methods=("PUT", "PATCH"),
         detail=False,
         url_path="profile",
         url_name="update-profile",
     )
     def update_profile(
         self,
-        request:DRFRequest,
-        *args:tuple[Any,...],
-        **kwargs:dict[str,Any],
-    )->DRFResponse:
+        request: DRFRequest,
+        *args: tuple[Any, ...],
+        **kwargs: dict[str, Any],
+    ) -> DRFResponse:
         """
-        Updating the user Profile using this endpoint, 
+        Updating the user Profile using this endpoint,
         getting the result with the updaed the user profile
         """
 
-        serializer:UserSerializer=UserSerializer(
+        serializer: UserSerializer = UserSerializer(
             request.user,
             data=request.data,
             partial=True,
