@@ -36,8 +36,6 @@ export const CommentList = ({ movieId }: CommentListProps) => {
   }, [loadComments]);
 
   const handleCommentAdded = useCallback(async () => {
-    // Обновляем список комментариев без показа loader
-    // Используем небольшую задержку чтобы дать серверу время обработать запрос
     await new Promise(resolve => setTimeout(resolve, 100));
     await loadComments(false);
   }, [loadComments]);

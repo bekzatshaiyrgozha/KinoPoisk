@@ -72,15 +72,15 @@ User = get_user_model()
 class MovieViewSet(ViewSet):
     """ViewSet for managing movies."""
 
-    permission_classes = [AllowAny]
-
     @extend_schema(
         responses={
             HTTP_200_OK: MovieListSuccessResponseSerializer,
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    @action(methods=["GET"], detail=False, url_path="list")
+    @action(
+        methods=["GET"], detail=False, url_path="list", permission_classes=[AllowAny]
+    )
     def list_movies(self, request):
         movies = Movie.objects.annotate(
             average_rating=Avg("ratings__score"),
@@ -312,25 +312,7 @@ class MovieViewSet(ViewSet):
         permission_classes=[IsAuthenticated],
     )
     def rate_movie(self, request, pk=None):
-        if not request.user or not request.user.is_authenticated:
-            return Response(
-                {"success": False, "message": "Authentication required"},
-                status=HTTP_401_UNAUTHORIZED,
-            )
-
-        try:
-            movie = Movie.objects.get(id=pk)
-        except Movie.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Movie not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
-
-        if isinstance(request.data, dict):
-            score = request.data.get("score")
-        else:
-            score = getattr(request.data, "score", None) if hasattr(request.data, "score") else None
-
+        score: int | None = request.data.get("score")
         if score is None:
             return Response(
                 {"success": False, "message": "Score is required"},
@@ -349,6 +331,14 @@ class MovieViewSet(ViewSet):
             return Response(
                 {"success": False, "message": "Score must be between 1 and 5"},
                 status=HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            movie = Movie.objects.get(id=pk)
+        except Movie.DoesNotExist:
+            return Response(
+                {"success": False, "message": "Movie not found"},
+                status=HTTP_404_NOT_FOUND,
             )
 
         rating, _ = Rating.objects.update_or_create(
