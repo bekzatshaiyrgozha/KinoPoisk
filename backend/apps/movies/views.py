@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError, NotFound, PermissionDenied
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
@@ -27,7 +28,6 @@ from apps.movies.serializers import (
     MovieSerializer,
     CommentSerializer,
     RatingSerializer,
-    MovieSearchSerializer,
     MovieVideoUploadSerializer,
     ReviewSerializer,
     RatingDetailSerializer,
@@ -116,10 +116,7 @@ class MovieViewSet(ViewSet):
                 likes_count=Count("likes", distinct=True),
             ).get(id=pk)
         except Movie.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Movie not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Movie not found"})
 
         serializer = MovieSerializer(movie, context={"request": request})
         return Response(
@@ -143,12 +140,8 @@ class MovieViewSet(ViewSet):
         permission_classes=[IsAuthenticated],
     )
     def search_movies(self, request):
-        serializer = MovieSearchSerializer(data=request.query_params)
-        if not serializer.is_valid():
-            return Response(
-                {"success": False, "errors": serializer.errors},
-                status=HTTP_400_BAD_REQUEST,
-            )
+        serializer = MovieSearchRequestSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
 
         validated_data = serializer.validated_data
         query = validated_data.get("query", "").strip()
@@ -203,17 +196,10 @@ class MovieViewSet(ViewSet):
         try:
             movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Movie not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Movie not found"})
 
         serializer = MovieVideoUploadSerializer(movie, data=request.data, partial=True)
-        if not serializer.is_valid():
-            return Response(
-                {"success": False, "errors": serializer.errors},
-                status=HTTP_400_BAD_REQUEST,
-            )
+        serializer.is_valid(raise_exception=True)
         serializer.save()
 
         return Response(
@@ -273,17 +259,10 @@ class MovieViewSet(ViewSet):
         try:
             movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Movie not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Movie not found"})
 
         serializer = CommentSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(
-                {"success": False, "errors": serializer.errors},
-                status=HTTP_400_BAD_REQUEST,
-            )
+        serializer.is_valid(raise_exception=True)
 
         serializer.save(user=request.user, movie=movie)
         return Response(
@@ -313,19 +292,12 @@ class MovieViewSet(ViewSet):
     )
     def rate_movie(self, request, pk=None):
         request_serializer = RatingRequestSerializer(data=request.data)
-        if not request_serializer.is_valid():
-            return Response(
-                {"success": False, "errors": request_serializer.errors},
-                status=HTTP_400_BAD_REQUEST,
-            )
+        request_serializer.is_valid(raise_exception=True)
 
         try:
             movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Movie not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Movie not found"})
 
         score = request_serializer.validated_data["score"]
         rating, _ = Rating.objects.update_or_create(
@@ -338,7 +310,7 @@ class MovieViewSet(ViewSet):
                 "message": "Rating saved successfully",
                 "data": serializer.data,
             },
-            status=HTTP_200_OK,
+            status=HTTP_201_CREATED,
         )
 
 
@@ -358,34 +330,38 @@ class LikeViewSet(ViewSet):
     )
     @action(methods=["POST"], detail=False, url_path="toggle")
     def toggle_like(self, request):
-        content_type_str = request.data.get("content_type")
+        content_type_input = request.data.get("content_type")
         object_id = request.data.get("object_id")
 
-        if not content_type_str or not object_id:
-            return Response(
+        if not content_type_input or object_id is None:
+            raise ValidationError(
                 {
-                    "success": False,
-                    "message": "content_type and object_id are required",
-                },
-                status=HTTP_400_BAD_REQUEST,
+                    "content_type": ["content_type is required"],
+                    "object_id": ["object_id is required"],
+                }
             )
 
         try:
-            ct = ContentType.objects.get(model=content_type_str)
-        except ContentType.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Invalid content_type"},
-                status=HTTP_400_BAD_REQUEST,
-            )
+            object_id = int(object_id)
+        except (TypeError, ValueError):
+            raise ValidationError({"object_id": ["Invalid object_id"]})
+
+        ct = None
+        try:
+            ct = ContentType.objects.get(pk=int(content_type_input))
+        except Exception:
+            try:
+                if isinstance(content_type_input, str) and "." in content_type_input:
+                    app_label, model = content_type_input.split(".", 1)
+                    ct = ContentType.objects.get(app_label=app_label, model=model)
+                else:
+                    ct = ContentType.objects.get(model=content_type_input)
+            except ContentType.DoesNotExist:
+                raise ValidationError({"content_type": ["Invalid content_type"]})
 
         obj_model = ct.model_class()
-        try:
-            obj_model.objects.get(id=object_id)
-        except obj_model.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Object not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+        if not obj_model.objects.filter(pk=object_id).exists():
+            raise NotFound(detail={"message": "Object not found"})
 
         existing_like = Like.objects.filter(
             user=request.user, content_type=ct, object_id=object_id
@@ -481,10 +457,7 @@ class ReviewViewSet(ViewSet):
         try:
             review = Review.objects.select_related("user", "movie").get(id=pk)
         except Review.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Review not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Review not found"})
 
         serializer = ReviewSerializer(review)
         return Response(
@@ -507,18 +480,11 @@ class ReviewViewSet(ViewSet):
         try:
             review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Review not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Review not found"})
 
         if not IsOwnerOrAdmin().has_object_permission(request, self, review):
-            return Response(
-                {
-                    "success": False,
-                    "message": "You do not have permission to update this review",
-                },
-                status=HTTP_403_FORBIDDEN,
+            raise PermissionDenied(
+                detail={"message": "You do not have permission to update this review"}
             )
 
         serializer = ReviewSerializer(review, data=request.data, partial=True)
@@ -547,18 +513,11 @@ class ReviewViewSet(ViewSet):
         try:
             review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Review not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Review not found"})
 
         if not IsOwnerOrAdmin().has_object_permission(request, self, review):
-            return Response(
-                {
-                    "success": False,
-                    "message": "You do not have permission to delete this review",
-                },
-                status=HTTP_403_FORBIDDEN,
+            raise PermissionDenied(
+                detail={"message": "You do not have permission to delete this review"}
             )
 
         review.delete()
@@ -627,18 +586,11 @@ class RatingViewSet(ViewSet):
         try:
             rating = Rating.objects.get(id=pk)
         except Rating.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Rating not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Rating not found"})
 
         if not IsOwnerOrAdmin().has_object_permission(request, self, rating):
-            return Response(
-                {
-                    "success": False,
-                    "message": "You do not have permission to delete this rating",
-                },
-                status=HTTP_403_FORBIDDEN,
+            raise PermissionDenied(
+                detail={"message": "You do not have permission to delete this rating"}
             )
 
         rating.delete()
@@ -679,18 +631,11 @@ class FavoriteViewSet(ViewSet):
     )
     def create(self, request):
         serializer = FavoriteSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(
-                {"success": False, "errors": serializer.errors},
-                status=HTTP_400_BAD_REQUEST,
-            )
+        serializer.is_valid(raise_exception=True)
 
         movie_id = serializer.validated_data.get("movie_id")
         if Favorite.objects.filter(user=request.user, movie_id=movie_id).exists():
-            return Response(
-                {"success": False, "message": "Movie already in favorites"},
-                status=HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"movie_id": ["Movie already in favorites"]})
 
         serializer.save(user=request.user)
         return Response(
@@ -715,18 +660,11 @@ class FavoriteViewSet(ViewSet):
         try:
             favorite = Favorite.objects.get(id=pk)
         except Favorite.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Favorite not found"},
-                status=HTTP_404_NOT_FOUND,
-            )
+            raise NotFound(detail={"message": "Favorite not found"})
 
         if not IsOwnerOrAdmin().has_object_permission(request, self, favorite):
-            return Response(
-                {
-                    "success": False,
-                    "message": "You do not have permission to remove this favorite",
-                },
-                status=HTTP_403_FORBIDDEN,
+            raise PermissionDenied(
+                detail={"message": "You do not have permission to remove this favorite"}
             )
 
         favorite.delete()
