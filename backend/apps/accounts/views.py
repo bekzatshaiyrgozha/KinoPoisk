@@ -22,13 +22,7 @@ from apps.accounts.serializers_requests import (
     LoginRequestSerializer,
     RegistrationRequestSerializer,
 )
-from apps.accounts.serializers_responses import (
-    UserSuccessResponseSerializer,
-    RegistrationErrorResponseSerializer,
-    LoginErrorResponseSerializer,
-    AuthenticationErrorResponseSerializer,
-    ProfileUpdateErrorResponseSerializer,
-)
+from apps.accounts.serializers_responses import UserSuccessResponseSerializer
 
 User = get_user_model()
 
@@ -40,7 +34,7 @@ class AuthViewSet(ViewSet):
         request=RegistrationRequestSerializer,
         responses={
             HTTP_201_CREATED: UserSuccessResponseSerializer,
-            HTTP_400_BAD_REQUEST: RegistrationErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
             HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
@@ -79,7 +73,7 @@ class AuthViewSet(ViewSet):
         request=LoginRequestSerializer,
         responses={
             HTTP_200_OK: UserSuccessResponseSerializer,
-            HTTP_400_BAD_REQUEST: LoginErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
             HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
@@ -114,7 +108,6 @@ class AuthViewSet(ViewSet):
         responses={
             HTTP_200_OK: ErrorResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: AuthenticationErrorResponseSerializer,
             HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
@@ -150,7 +143,7 @@ class UserProfileViewSet(ViewSet):
     @extend_schema(
         responses={
             HTTP_200_OK: UserSuccessResponseSerializer,
-            HTTP_401_UNAUTHORIZED: AuthenticationErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
             HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
@@ -168,8 +161,8 @@ class UserProfileViewSet(ViewSet):
         request=UserSerializer,
         responses={
             HTTP_200_OK: UserSuccessResponseSerializer,
-            HTTP_400_BAD_REQUEST: ProfileUpdateErrorResponseSerializer,
-            HTTP_401_UNAUTHORIZED: AuthenticationErrorResponseSerializer,
+            HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
             HTTP_405_METHOD_NOT_ALLOWED: ErrorResponseSerializer,
         },
     )
