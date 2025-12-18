@@ -1,3 +1,6 @@
+# Python modules
+from typing import Any, Optional
+
 # Django modules
 from django.db.models import Avg, Count, Q
 from django.contrib.contenttypes.models import ContentType
@@ -7,6 +10,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError, NotFound, PermissionDenied
 from rest_framework.status import (
     HTTP_200_OK,
@@ -21,6 +25,7 @@ from rest_framework.status import (
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
 from drf_spectacular.utils import extend_schema
+
 
 # Project modules
 from apps.movies.models import Movie, Comment, Like, Rating, Review, Favorite
@@ -81,7 +86,7 @@ class MovieViewSet(ViewSet):
     @action(
         methods=["GET"], detail=False, url_path="list", permission_classes=[AllowAny]
     )
-    def list_movies(self, request):
+    def list_movies(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         movies = Movie.objects.annotate(
             average_rating=Avg("ratings__score"),
             likes_count=Count("likes", distinct=True),
@@ -109,7 +114,9 @@ class MovieViewSet(ViewSet):
         url_path="detail",
         permission_classes=[IsAuthenticated],
     )
-    def retrieve_movie(self, request, pk=None):
+    def retrieve_movie(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         try:
             movie = Movie.objects.annotate(
                 average_rating=Avg("ratings__score"),
@@ -139,7 +146,7 @@ class MovieViewSet(ViewSet):
         url_path="search",
         permission_classes=[IsAuthenticated],
     )
-    def search_movies(self, request):
+    def search_movies(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = MovieSearchRequestSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
@@ -192,7 +199,9 @@ class MovieViewSet(ViewSet):
         permission_classes=[IsAdminUser],
         parser_classes=[MultiPartParser, FormParser],
     )
-    def upload_video(self, request, pk=None):
+    def upload_video(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         try:
             movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
@@ -225,7 +234,9 @@ class MovieViewSet(ViewSet):
         url_path="comments",
         permission_classes=[IsAuthenticated],
     )
-    def get_comments(self, request, pk=None):
+    def get_comments(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         comments = (
             Comment.objects.filter(movie_id=pk, parent=None)
             .select_related("user", "movie")
@@ -255,7 +266,9 @@ class MovieViewSet(ViewSet):
         url_path="comments",
         permission_classes=[IsAuthenticated],
     )
-    def create_comment(self, request, pk=None):
+    def create_comment(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         try:
             movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
@@ -290,7 +303,9 @@ class MovieViewSet(ViewSet):
         url_path="rate",
         permission_classes=[IsAuthenticated],
     )
-    def rate_movie(self, request, pk=None):
+    def rate_movie(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         request_serializer = RatingRequestSerializer(data=request.data)
         request_serializer.is_valid(raise_exception=True)
 
@@ -329,7 +344,7 @@ class LikeViewSet(ViewSet):
         },
     )
     @action(methods=["POST"], detail=False, url_path="toggle")
-    def toggle_like(self, request):
+    def toggle_like(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         content_type_input = request.data.get("content_type")
         object_id = request.data.get("object_id")
 
@@ -408,7 +423,7 @@ class ReviewViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def list(self, request):
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         movie_id = request.query_params.get("movie_id")
         if movie_id:
             reviews = Review.objects.filter(movie_id=movie_id)
@@ -431,7 +446,7 @@ class ReviewViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def create(self, request):
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = ReviewSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user)
@@ -453,7 +468,9 @@ class ReviewViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def retrieve(self, request, pk=None):
+    def retrieve(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         try:
             review = Review.objects.select_related("user", "movie").get(id=pk)
         except Review.DoesNotExist:
@@ -476,7 +493,9 @@ class ReviewViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def partial_update(self, request, pk=None):
+    def partial_update(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         try:
             review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
@@ -509,7 +528,9 @@ class ReviewViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def destroy(self, request, pk=None):
+    def destroy(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         try:
             review = Review.objects.get(id=pk)
         except Review.DoesNotExist:
@@ -535,7 +556,7 @@ class RatingViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def list(self, request):
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         movie_id = request.query_params.get("movie_id")
         if movie_id:
             ratings = Rating.objects.filter(movie_id=movie_id)
@@ -558,7 +579,7 @@ class RatingViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def create(self, request):
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = RatingDetailSerializer(
             data=request.data, context={"request": request}
         )
@@ -582,7 +603,9 @@ class RatingViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def destroy(self, request, pk=None):
+    def destroy(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         try:
             rating = Rating.objects.get(id=pk)
         except Rating.DoesNotExist:
@@ -607,7 +630,7 @@ class FavoriteViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def list(self, request):
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         favorites = (
             Favorite.objects.filter(user=request.user)
             .select_related("movie")
@@ -629,7 +652,7 @@ class FavoriteViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def create(self, request):
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = FavoriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -656,7 +679,9 @@ class FavoriteViewSet(ViewSet):
             HTTP_405_METHOD_NOT_ALLOWED: MethodNotAllowedResponseSerializer,
         },
     )
-    def destroy(self, request, pk=None):
+    def destroy(
+        self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
+    ) -> Response:
         try:
             favorite = Favorite.objects.get(id=pk)
         except Favorite.DoesNotExist:

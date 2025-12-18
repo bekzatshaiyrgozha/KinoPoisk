@@ -1,3 +1,6 @@
+# Python modules
+from typing import Any
+
 # Django modules
 from django.contrib.auth import authenticate, get_user_model, logout
 from drf_spectacular.utils import extend_schema
@@ -5,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
@@ -14,6 +18,7 @@ from rest_framework.status import (
 )
 from rest_framework.viewsets import ViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
+
 
 # Project modules
 from apps.abstracts.serializers import (
@@ -43,7 +48,7 @@ class AuthViewSet(ViewSet):
         },
     )
     @action(methods=["POST"], detail=False, url_path="register")
-    def register(self, request) -> Response:
+    def register(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = RegistrationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -82,7 +87,7 @@ class AuthViewSet(ViewSet):
         },
     )
     @action(methods=["POST"], detail=False, url_path="login")
-    def login(self, request) -> Response:
+    def login(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = LoginRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -121,7 +126,7 @@ class AuthViewSet(ViewSet):
         url_path="logout",
         permission_classes=[IsAuthenticated],
     )
-    def logout_user(self, request) -> Response:
+    def logout_user(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         refresh_token: str | None = request.data.get("refresh")
 
         if not refresh_token:
@@ -152,7 +157,7 @@ class UserProfileViewSet(ViewSet):
         },
     )
     @action(methods=["GET"], detail=False, url_path="profile")
-    def get_profile(self, request) -> Response:
+    def get_profile(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return Response(
             {
                 "success": True,
@@ -171,7 +176,7 @@ class UserProfileViewSet(ViewSet):
         },
     )
     @action(methods=["PUT", "PATCH"], detail=False, url_path="profile")
-    def update_profile(self, request) -> Response:
+    def update_profile(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = UserSerializer(
             request.user,
             data=request.data,
