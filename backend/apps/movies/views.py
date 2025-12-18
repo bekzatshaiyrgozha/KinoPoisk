@@ -2,11 +2,9 @@
 from typing import Any, Optional
 
 # Django modules
-from django.db.models import Avg, Count, Q
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
-
-# Django Third-party modules
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Avg, Count, Q, Prefetch
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
@@ -87,10 +85,25 @@ class MovieViewSet(ViewSet):
         methods=["GET"], detail=False, url_path="list", permission_classes=[AllowAny]
     )
     def list_movies(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        movies = Movie.objects.annotate(
-            average_rating=Avg("ratings__score"),
-            likes_count=Count("likes", distinct=True),
-        ).all()
+        movies = (
+            Movie.objects.annotate(
+                average_rating=Avg("ratings__score"),
+                likes_count=Count("likes", distinct=True),
+            )
+            .prefetch_related(
+                Prefetch(
+                    "likes",
+                    queryset=Like.objects.filter(user=request.user),
+                    to_attr="user_likes",
+                ),
+                Prefetch(
+                    "ratings",
+                    queryset=Rating.objects.filter(user=request.user),
+                    to_attr="user_ratings",
+                ),
+            )
+            .all()
+        )
 
         paginator = StandardResultsSetPagination()
         paginated_movies = paginator.paginate_queryset(movies, request)
@@ -118,10 +131,25 @@ class MovieViewSet(ViewSet):
         self, request: Request, pk: Optional[str] = None, *args: Any, **kwargs: Any
     ) -> Response:
         try:
-            movie = Movie.objects.annotate(
-                average_rating=Avg("ratings__score"),
-                likes_count=Count("likes", distinct=True),
-            ).get(id=pk)
+            movie = (
+                Movie.objects.annotate(
+                    average_rating=Avg("ratings__score"),
+                    likes_count=Count("likes", distinct=True),
+                )
+                .prefetch_related(
+                    Prefetch(
+                        "likes",
+                        queryset=Like.objects.filter(user=request.user),
+                        to_attr="user_likes",
+                    ),
+                    Prefetch(
+                        "ratings",
+                        queryset=Rating.objects.filter(user=request.user),
+                        to_attr="user_ratings",
+                    ),
+                )
+                .get(id=pk)
+            )
         except Movie.DoesNotExist:
             raise NotFound(detail={"message": "Movie not found"})
 
@@ -157,7 +185,20 @@ class MovieViewSet(ViewSet):
         year_to = validated_data.get("year_to")
         ordering = validated_data.get("ordering", "-created_at")
 
-        movies = Movie.objects.annotate(avg_rating=Avg("ratings__score"))
+        movies = Movie.objects.annotate(
+            avg_rating=Avg("ratings__score")
+        ).prefetch_related(
+            Prefetch(
+                "likes",
+                queryset=Like.objects.filter(user=request.user),
+                to_attr="user_likes",
+            ),
+            Prefetch(
+                "ratings",
+                queryset=Rating.objects.filter(user=request.user),
+                to_attr="user_ratings",
+            ),
+        )
 
         if query:
             movies = movies.filter(
@@ -240,7 +281,19 @@ class MovieViewSet(ViewSet):
         comments = (
             Comment.objects.filter(movie_id=pk, parent=None)
             .select_related("user", "movie")
-            .prefetch_related("replies__user")
+            .prefetch_related(
+                "replies__user",
+                Prefetch(
+                    "likes",
+                    queryset=Like.objects.filter(user=request.user),
+                    to_attr="user_likes",
+                ),
+                Prefetch(
+                    "replies__likes",
+                    queryset=Like.objects.filter(user=request.user),
+                    to_attr="replies_user_likes",
+                ),
+            )
             .annotate(likes_count=Count("likes", distinct=True))
         )
 
@@ -382,16 +435,6 @@ class LikeViewSet(ViewSet):
             user=request.user, content_type=ct, object_id=object_id
         ).first()
 
-        if existing_like:
-            existing_like.delete()
-            likes_count = Like.objects.filter(
-                content_type=ct, object_id=object_id
-            ).count()
-            return Response(
-                {"success": True, "liked": False, "likes_count": likes_count},
-                status=HTTP_200_OK,
-            )
-
         soft_deleted_like = Like.all_objects.filter(
             user=request.user,
             content_type=ct,
@@ -399,16 +442,21 @@ class LikeViewSet(ViewSet):
             deleted_at__isnull=False,
         ).first()
 
-        if soft_deleted_like:
+        if existing_like:
+            existing_like.delete()
+            liked = False
+        elif soft_deleted_like:
             soft_deleted_like.deleted_at = None
             soft_deleted_like.save(update_fields=["deleted_at"])
+            liked = True
         else:
             Like.objects.create(user=request.user, content_type=ct, object_id=object_id)
+            liked = True
 
         likes_count = Like.objects.filter(content_type=ct, object_id=object_id).count()
         return Response(
-            {"success": True, "liked": True, "likes_count": likes_count},
-            status=HTTP_201_CREATED,
+            {"success": True, "liked": liked, "likes_count": likes_count},
+            status=HTTP_201_CREATED if liked else HTTP_200_OK,
         )
 
 
@@ -559,9 +607,11 @@ class RatingViewSet(ViewSet):
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         movie_id = request.query_params.get("movie_id")
         if movie_id:
-            ratings = Rating.objects.filter(movie_id=movie_id)
+            ratings = Rating.objects.filter(movie_id=movie_id).select_related(
+                "user", "movie"
+            )
         else:
-            ratings = Rating.objects.all()
+            ratings = Rating.objects.all().select_related("user", "movie")
 
         serializer = RatingDetailSerializer(ratings, many=True)
         return Response(

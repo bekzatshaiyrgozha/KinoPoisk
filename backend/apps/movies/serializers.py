@@ -57,22 +57,12 @@ class MovieSerializer(serializers.ModelSerializer):
         return None
 
     def get_is_liked(self, obj):
-        request = self.context.get("request") if self.context else None
-        user = request.user if request else None
-        if user and user.is_authenticated:
-            content_type = ContentType.objects.get_for_model(Movie)
-            return Like.objects.filter(
-                content_type=content_type, object_id=obj.id, user=user
-            ).exists()
-        return False
+        user_likes = getattr(obj, "user_likes", [])
+        return len(user_likes) > 0
 
     def get_user_rating(self, obj):
-        request = self.context.get("request") if self.context else None
-        user = request.user if request else None
-        if user and user.is_authenticated:
-            rating = Rating.objects.filter(movie=obj, user=user).first()
-            return rating.score if rating else None
-        return None
+        user_ratings = getattr(obj, "user_ratings", [])
+        return user_ratings[0].score if user_ratings else None
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -108,19 +98,11 @@ class CommentSerializer(serializers.ModelSerializer):
         ]
 
     def get_is_liked(self, obj):
-        user = self.context.get("request").user if self.context.get("request") else None
-        if user and user.is_authenticated:
-            content_type = ContentType.objects.get_for_model(Comment)
-            return Like.objects.filter(
-                content_type=content_type, object_id=obj.id, user=user
-            ).exists()
-        return False
+        user_likes = getattr(obj, "user_likes", [])
+        return len(user_likes) > 0
 
     def get_replies(self, obj):
         replies = obj.replies.annotate(likes_count=Count("likes", distinct=True))
-
-        user = self.context.get("request").user if self.context.get("request") else None
-        content_type = ContentType.objects.get_for_model(Comment)
 
         return [
             {
@@ -129,11 +111,7 @@ class CommentSerializer(serializers.ModelSerializer):
                 "text": reply.text,
                 "parent": reply.parent_id,
                 "likes_count": reply.likes_count,
-                "is_liked": Like.objects.filter(
-                    content_type=content_type, object_id=reply.id, user=user
-                ).exists()
-                if user and user.is_authenticated
-                else False,
+                "is_liked": len(getattr(reply, "replies_user_likes", [])) > 0,
                 "created_at": reply.created_at,
                 "updated_at": reply.updated_at,
             }
