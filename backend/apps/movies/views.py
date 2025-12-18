@@ -16,8 +16,10 @@ from rest_framework.status import (
     HTTP_201_CREATED,
     HTTP_204_NO_CONTENT,
     HTTP_400_BAD_REQUEST,
-    HTTP_404_NOT_FOUND,
+    HTTP_401_UNAUTHORIZED,
     HTTP_403_FORBIDDEN,
+    HTTP_404_NOT_FOUND,
+    HTTP_405_METHOD_NOT_ALLOWED,
 )
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -67,6 +69,10 @@ class MovieViewSet(ViewSet):
                 description="List of all movies",
                 response=MovieSerializer(many=True),
             ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
         },
     )
     @action(
@@ -104,8 +110,20 @@ class MovieViewSet(ViewSet):
                 description="Movie details",
                 response=MovieSerializer,
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
             HTTP_404_NOT_FOUND: OpenApiResponse(
                 description="Movie not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -157,6 +175,10 @@ class MovieViewSet(ViewSet):
             ),
             HTTP_400_BAD_REQUEST: OpenApiResponse(
                 description="Bad request",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -235,8 +257,20 @@ class MovieViewSet(ViewSet):
                 description="Bad request",
                 response=ValidationErrorResponseSerializer,
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
             HTTP_404_NOT_FOUND: OpenApiResponse(
                 description="Movie not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -286,6 +320,18 @@ class MovieViewSet(ViewSet):
                 description="List of all comments",
                 response=CommentSerializer(many=True),
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
+                response=ErrorResponseSerializer,
+            ),
         },
     )
     @action(
@@ -327,15 +373,27 @@ class MovieViewSet(ViewSet):
         tags=["Comments"],
         request=CommentSerializer,
         responses={
-            HTTP_200_OK: OpenApiResponse(
+            HTTP_201_CREATED: OpenApiResponse(
                 description="Comment created",
                 response=CommentSerializer,
             ),
             HTTP_400_BAD_REQUEST: OpenApiResponse(
                 description="Bad request", response=ValidationErrorResponseSerializer
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
             HTTP_404_NOT_FOUND: OpenApiResponse(
                 description="Movie not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },
@@ -390,8 +448,20 @@ class MovieViewSet(ViewSet):
                 description="Bad request",
                 response=ValidationErrorResponseSerializer,
             ),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Unauthorized",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_403_FORBIDDEN: OpenApiResponse(
+                description="Permission denied",
+                response=ErrorResponseSerializer,
+            ),
             HTTP_404_NOT_FOUND: OpenApiResponse(
                 description="Movie not found",
+                response=ErrorResponseSerializer,
+            ),
+            HTTP_405_METHOD_NOT_ALLOWED: OpenApiResponse(
+                description="Method not allowed",
                 response=ErrorResponseSerializer,
             ),
         },

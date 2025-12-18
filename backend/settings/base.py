@@ -3,7 +3,7 @@ from datetime import timedelta
 import os
 
 # Project modules
-from settings.conf import *
+from settings.conf import *  # noqa: F403
 
 
 """
