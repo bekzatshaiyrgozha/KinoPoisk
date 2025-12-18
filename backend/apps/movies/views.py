@@ -312,6 +312,12 @@ class MovieViewSet(ViewSet):
         permission_classes=[IsAuthenticated],
     )
     def rate_movie(self, request, pk=None):
+        if not request.user or not request.user.is_authenticated:
+            return Response(
+                {"success": False, "message": "Authentication required"},
+                status=HTTP_401_UNAUTHORIZED,
+            )
+
         try:
             movie = Movie.objects.get(id=pk)
         except Movie.DoesNotExist:
@@ -320,8 +326,26 @@ class MovieViewSet(ViewSet):
                 status=HTTP_404_NOT_FOUND,
             )
 
-        score = request.data.get("score")
-        if score is None or not (1 <= int(score) <= 5):
+        if isinstance(request.data, dict):
+            score = request.data.get("score")
+        else:
+            score = getattr(request.data, "score", None) if hasattr(request.data, "score") else None
+
+        if score is None:
+            return Response(
+                {"success": False, "message": "Score is required"},
+                status=HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            score = int(score)
+        except (ValueError, TypeError):
+            return Response(
+                {"success": False, "message": "Score must be a number"},
+                status=HTTP_400_BAD_REQUEST,
+            )
+
+        if not (1 <= score <= 5):
             return Response(
                 {"success": False, "message": "Score must be between 1 and 5"},
                 status=HTTP_400_BAD_REQUEST,
