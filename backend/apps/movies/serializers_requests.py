@@ -170,3 +170,9 @@ class VideoUploadRequestSerializer(serializers.Serializer):
     """Serializer for video upload requests."""
 
     video = serializers.FileField()
+
+
+class MovieFilterRequestSerializer(serializers.Serializer):
+    """Serializer for filtering by movie_id in query params."""
+
+    movie_id = serializers.IntegerField(required=False, help_text="Filter by movie ID")

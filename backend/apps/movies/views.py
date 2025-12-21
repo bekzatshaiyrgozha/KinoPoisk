@@ -45,6 +45,7 @@ from apps.movies.serializers_requests import (
     RatingDetailRequestSerializer,
     FavoriteRequestSerializer,
     VideoUploadRequestSerializer,
+    MovieFilterRequestSerializer,
 )
 from apps.movies.serializers_responses import (
     MovieSuccessResponseSerializer,
@@ -177,7 +178,7 @@ class MovieViewSet(ViewSet):
         )
 
     @extend_schema(
-        request=MovieSearchRequestSerializer,
+        parameters=[MovieSearchRequestSerializer],
         responses={
             HTTP_200_OK: MovieListSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
@@ -503,6 +504,7 @@ class ReviewViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        parameters=[MovieFilterRequestSerializer],
         responses={
             HTTP_200_OK: ReviewListSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
@@ -636,6 +638,7 @@ class RatingViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        parameters=[MovieFilterRequestSerializer],
         responses={
             HTTP_200_OK: RatingDetailListSuccessResponseSerializer,
             HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
