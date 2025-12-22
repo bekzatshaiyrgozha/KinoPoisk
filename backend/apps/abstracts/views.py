@@ -10,6 +10,7 @@ class HealthCheckViewSet(viewsets.GenericViewSet):
     """A simple ViewSet for health check endpoint."""
 
     permission_classes = [AllowAny]
+    throttle_classes = []
 
     def health_check(self, request: Request, *args, **kwargs) -> Response:
         return Response({"status": "ok"}, status=HTTP_200_OK)
