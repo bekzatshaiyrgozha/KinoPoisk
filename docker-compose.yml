@@ -56,12 +56,17 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/frontend.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
     ports:
       - "80:80"
+    env_file:
+      - .env
     depends_on:
       - backend
     networks:
       - our-network
+   
    
       
 volumes:
