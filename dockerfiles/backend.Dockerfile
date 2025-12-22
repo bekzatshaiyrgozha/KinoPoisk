@@ -13,4 +13,6 @@ COPY ../backend .
 
 EXPOSE 8000
 
-CMD ["gunicorn", "settings.wsgi:application", "--bind", "0.0.0.0:8000"]
+RUN python3 manage.py collectstatic --noinput && python3 manage.py migrate
+
+CMD ["sh", "-c", "python3 manage.py migrate && gunicorn settings.wsgi:application --bind 0.0.0.0:8000"]
