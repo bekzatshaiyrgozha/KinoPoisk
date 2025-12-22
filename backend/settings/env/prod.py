@@ -1,12 +1,12 @@
 # Project modules
-from settings.base import *
 from settings.conf import POSTGRESQL_URL
+from settings.base import *  # noqa F401
 
 # Third-party modules
 import dj_database_url
 
 
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ["localhost:8000", "localhost", "localhost:5173", "165.227.173.159"]
 
 DATABASES = {
