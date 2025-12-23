@@ -7,7 +7,7 @@ import dj_database_url
 
 
 DEBUG = False
-ALLOWED_HOSTS = ["localhost:8000", "localhost", "localhost:5173", "165.227.173.159"]
+ALLOWED_HOSTS = ["localhost:8000", "localhost", "localhost:5173"]
 
 DATABASES = {
     "default": dj_database_url.config(
