@@ -68,7 +68,6 @@ class TestMovieList:
 
     def test_list_movies_pagination(self, api_client: APIClient, movie1: Movie) -> None:
         """Test pagination works"""
-        # Create 15 movies
         for i in range(15):
             Movie.objects.create(
                 title=f"Movie {i}",
